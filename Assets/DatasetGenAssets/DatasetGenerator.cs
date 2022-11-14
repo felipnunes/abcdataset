@@ -1,8 +1,8 @@
-using UnityEngine;
-using UnityEngine.UI;
-using System.IO;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class DatasetGenerator : MonoBehaviour
 {
@@ -147,6 +147,7 @@ public class DatasetGenerator : MonoBehaviour
         cameraPositionRotation.Clear();
 
         GameObject dummyGO = new GameObject();
+        dummyGO.name = "teste";
 
         for (int i = 0; i < sliderDatasetSize.value; ++i)
         {
@@ -335,7 +336,7 @@ public class DatasetGenerator : MonoBehaviour
         isDirty = true;
     }
 
-    
+
     // OnValueChange event of "Render half sphere only" checkbox
     public void OnValueChangedCamHalfSphere()
     {

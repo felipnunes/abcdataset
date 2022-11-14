@@ -269,7 +269,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!136 &27620420
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -2898,6 +2898,7 @@ GameObject:
   - component: {fileID: 934295420}
   - component: {fileID: 934295419}
   - component: {fileID: 934295421}
+  - component: {fileID: 934295422}
   m_Layer: 0
   m_Name: DatasetGenManager
   m_TagString: Untagged
@@ -2917,7 +2918,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df39395eca25b5c48a84a13430f3c644, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  datasetPath: E:\Datasets\ABCdataset
+  datasetPath: C:\Users\felip\Documents\IC_Projeto\dataset
   cameraShaded: {fileID: 1828627081}
   cameraSketch: {fileID: 1082366266}
   cameraTarget: {fileID: 27620423}
@@ -2962,6 +2963,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isLogging: 1
+--- !u!114 &934295422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 934295418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf0c23e55f299c84390f0667b887f698, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &937034340
 GameObject:
   m_ObjectHideFlags: 0
@@ -3898,7 +3911,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &1288560391
 BoxCollider:
   m_ObjectHideFlags: 0
