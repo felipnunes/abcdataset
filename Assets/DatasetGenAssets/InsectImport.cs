@@ -6,23 +6,18 @@ using System;
 
 public class InsectImport : MonoBehaviour
 {
-    string[] rawFileNames;
-    string[] fileNames;
+    string[] rawModelFileNames;
+    string[] modelFileNames;
 
     void Start()
-    {
-        
-        rawFileNames = System.IO.Directory.GetFiles("Assets/Resources");
-        fileNames = ObjectNameFilter(rawFileNames);
-
-        //Instanciate a new object by file name
-        var insect = Resources.Load<GameObject>(fileNames[UnityEngine.Random.Range(0, fileNames.Length)]);
-        Instantiate(insect);
-
+    {      
+        rawModelFileNames = System.IO.Directory.GetFiles("Assets/Resources");
+        modelFileNames = ObjectNameFilter(rawModelFileNames);
+        InstantiateRandomModel();
     }
 
-    //Returns .obj names array without the extention ".obj" and removes .meta files from a given array.
-    string[] ObjectNameFilter(string[] fileNames)
+    /*Returns .obj names array without the extention ".obj" and removes .meta files from a given array.*/
+    private string[] ObjectNameFilter(string[] fileNames)
     {
         string[] filteredFileNames = new string[fileNames.Length / 2];
 
@@ -38,6 +33,25 @@ public class InsectImport : MonoBehaviour
         }
         return filteredFileNames;
     }
+
+    public void InstantiateRandomModel()
+    {
+        if (GameObject.FindGameObjectWithTag("Model") != null)
+        {
+            GameObject actualModel = GameObject.FindGameObjectWithTag("Model");
+            Destroy(actualModel);
+        }
+        else
+        {
+            GameObject insect = Resources.Load<GameObject>(modelFileNames[UnityEngine.Random.Range(0, modelFileNames.Length)]);
+            insect.tag = "Model";
+            Instantiate(insect);
+        }
+
+
+    }
+
+
 
     
 }

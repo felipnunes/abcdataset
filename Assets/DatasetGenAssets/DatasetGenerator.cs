@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -36,7 +37,12 @@ public class DatasetGenerator : MonoBehaviour
     public Slider sliderDatasetSize;
     public Slider sliderDelay;
     public Button buttonGenerateDataset;
+    public Button buttonAdvancedOptions;
     public Text progressText;
+    public GameObject panelCenter;
+
+    [Header("UI elements advanced options")]
+    public Toggle toggleRandomizeModel;
 
     private RenderTexture renderTextureShaded;
     private RenderTexture renderTextureSketch;
@@ -100,6 +106,7 @@ public class DatasetGenerator : MonoBehaviour
         sliderDatasetSize.onValueChanged.AddListener(delegate { OnValueChangeDatasetSize(); });
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
         buttonGenerateDataset.onClick.AddListener(delegate { OnClickButtonGenerate(); });
+        buttonAdvancedOptions.onClick.AddListener(delegate { OnClickButtonAdvancedOptions(); });
 
         // Force updating the labels of the sliders
         OnValueChangedRadius();
@@ -243,6 +250,8 @@ public class DatasetGenerator : MonoBehaviour
             // Check delay between images
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
+                
+
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
 
                 if (toggleRandomizeLightPos.isOn)
@@ -260,6 +269,11 @@ public class DatasetGenerator : MonoBehaviour
                 }
 
                 timeOfLastSave = Time.time;
+
+                if (toggleRandomizeModel.isOn)
+                {
+                    gameObject.GetComponent<InsectImport>().InstantiateRandomModel();
+                }
             }
         }
     }
@@ -399,4 +413,17 @@ public class DatasetGenerator : MonoBehaviour
             progressText.text = "";
         }
     }
+
+    public void OnClickButtonAdvancedOptions()
+    {
+        if (!panelCenter.activeSelf)
+        {
+            panelCenter.SetActive(true);
+        }
+        else
+        {
+            panelCenter.SetActive(false);
+        }
+    }
+
 }
