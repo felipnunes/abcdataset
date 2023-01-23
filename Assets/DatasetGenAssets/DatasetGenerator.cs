@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.UI;
 
 public class DatasetGenerator : MonoBehaviour
@@ -11,6 +13,9 @@ public class DatasetGenerator : MonoBehaviour
 
     [Header("Config")]
     public string datasetPath;
+
+    private string shadedPath = "/Sketch";
+    private string sketchPath = "/Shaded";
 
     public Camera cameraShaded;
     public Camera cameraSketch;
@@ -43,6 +48,7 @@ public class DatasetGenerator : MonoBehaviour
 
     [Header("UI elements advanced options")]
     public Toggle toggleRandomizeModel;
+    public Button buttonNormalizeModels;
 
     private RenderTexture renderTextureShaded;
     private RenderTexture renderTextureSketch;
@@ -50,8 +56,15 @@ public class DatasetGenerator : MonoBehaviour
     private Texture2D bufferedTexSketch;
 
     private bool isGenerating;
+    private bool shouldReplaceModel;
     private int indexOfCurrentImage;
     private float timeOfLastSave;
+
+    [Header("Light elements")]
+    public GameObject lightSource;
+
+    private GameObject actualModel;
+
 
     private Logger logger;
 
@@ -107,6 +120,7 @@ public class DatasetGenerator : MonoBehaviour
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
         buttonGenerateDataset.onClick.AddListener(delegate { OnClickButtonGenerate(); });
         buttonAdvancedOptions.onClick.AddListener(delegate { OnClickButtonAdvancedOptions(); });
+        buttonNormalizeModels.onClick.AddListener(delegate { OnClickButtonNormalizeModels();  });
 
         // Force updating the labels of the sliders
         OnValueChangedRadius();
@@ -114,6 +128,16 @@ public class DatasetGenerator : MonoBehaviour
         OnValueChangedVCamStep();
         OnValueChangeDatasetSize();
         OnValueChangeDelay();
+    }
+
+    IEnumerator TakePhoto()
+    {
+        // Wait for two frames to allow the object to finish instantiating
+        yield return null;
+        yield return null;
+
+        // Take the photo
+        SaveTexture();
     }
 
     void SaveTexture()
@@ -125,14 +149,14 @@ public class DatasetGenerator : MonoBehaviour
         bufferedTexShaded.ReadPixels(new Rect(0, 0, RenderTexture.active.width, RenderTexture.active.height), 0, 0);
         bufferedTexShaded.Apply();
         RenderTexture.active = null;
-        var imgPathShaded = Path.Combine(datasetPath, timeStamp + "-shaded.png");
+        var imgPathShaded = Path.Combine(datasetPath + shadedPath, timeStamp + "-shaded.png");
         File.WriteAllBytes(imgPathShaded, bufferedTexShaded.EncodeToPNG());
 
         RenderTexture.active = renderTextureSketch;
         bufferedTexSketch.ReadPixels(new Rect(0, 0, RenderTexture.active.width, RenderTexture.active.height), 0, 0);
         bufferedTexSketch.Apply();
         RenderTexture.active = null;
-        var imgPathSketch = Path.Combine(datasetPath, timeStamp + "-sketch.png");
+        var imgPathSketch = Path.Combine(datasetPath + sketchPath, timeStamp + "-sketch.png");
         File.WriteAllBytes(imgPathSketch, bufferedTexSketch.EncodeToPNG());
 
         progressText.text = "Generating " + (indexOfCurrentImage + 1) +
@@ -167,6 +191,10 @@ public class DatasetGenerator : MonoBehaviour
                     UnityEngine.Random.Range(toggleCamHalfSphere.isOn ? 0f : -sliderRadius.value, sliderRadius.value),
                     UnityEngine.Random.Range(-sliderRadius.value, sliderRadius.value));
                 curTransform.LookAt(cameraTarget);
+                if (cameraTarget == null)
+                {
+                    Debug.LogError("CameraTarget is null");
+                }
             }
             else
             {
@@ -193,7 +221,6 @@ public class DatasetGenerator : MonoBehaviour
                     hCamAngle = 0;
                 }
 
-                Debug.Log(vCamAngle);
                 if (vCamAngle > 90.0f || vCamAngle < -90.0f)
                 { //reset angle to prevent "upside down" camera
                     vCamAngle = 0;
@@ -236,13 +263,28 @@ public class DatasetGenerator : MonoBehaviour
         cameraShaded.transform.rotation = pr.Rotation;
     }
 
+    private void RandomizeModel()
+    {
+        
+        gameObject.GetComponent<InsectImport>().destroyActualModel();
+        gameObject.GetComponent<InsectImport>().InstantiateRandomModel();
+        if (actualModel != null)
+        {
+            cameraTarget = actualModel.transform;
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
+        actualModel = GameObject.FindGameObjectWithTag("Model");
+
         if (isDirty)
         {
             RebuildTransforms();
             isDirty = false;
+
+            
         }
 
         if (isGenerating)
@@ -251,15 +293,35 @@ public class DatasetGenerator : MonoBehaviour
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
                 
-
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
+
 
                 if (toggleRandomizeLightPos.isOn)
                 {
                     // TODO: randomize light position
+                    if (lightSource.GetComponent<Light>().type.ToString().Equals("Spot"))
+                    {
+                        lightSource.GetComponent<Light>().intensity = UnityEngine.Random.Range(60f, 120f);
+                        lightSource.transform.position = new Vector3(UnityEngine.Random.Range(-2, 2), lightSource.transform.position.y, UnityEngine.Random.Range(-2, 2));
+                        lightSource.transform.LookAt(actualModel.transform);
+                    }
+           
+
                 }
 
-                SaveTexture();
+
+
+
+
+
+                StartCoroutine(TakePhoto());
+
+                //Instantiate a new model and set it as cameraTarget
+                
+                if (toggleRandomizeModel.isOn)
+                {
+                    RandomizeModel();
+                }
 
                 // Go to next image
                 indexOfCurrentImage++;
@@ -270,12 +332,16 @@ public class DatasetGenerator : MonoBehaviour
 
                 timeOfLastSave = Time.time;
 
-                if (toggleRandomizeModel.isOn)
-                {
-                    gameObject.GetComponent<InsectImport>().InstantiateRandomModel();
-                }
             }
+
+            
         }
+        
+    }
+
+    private void LateUpdate()
+    {
+        
     }
 
     void Reset()
@@ -424,6 +490,12 @@ public class DatasetGenerator : MonoBehaviour
         {
             panelCenter.SetActive(false);
         }
+    }
+
+    public void OnClickButtonNormalizeModels()
+    {
+        //Normalize non normalized Models
+        gameObject.GetComponent<ModelNormalizer>().NormilizeResourcesModels();
     }
 
 }
