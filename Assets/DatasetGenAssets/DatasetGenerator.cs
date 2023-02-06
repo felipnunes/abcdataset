@@ -177,8 +177,14 @@ public class DatasetGenerator : MonoBehaviour
         vCamAngle = 0;
         cameraPositionRotation.Clear();
 
+
         GameObject dummyGO = new GameObject();
         dummyGO.name = "teste";
+
+        if (actualModel != null)
+        {
+            cameraTarget = actualModel.transform;
+        }
 
         for (int i = 0; i < sliderDatasetSize.value; ++i)
         {
@@ -231,7 +237,6 @@ public class DatasetGenerator : MonoBehaviour
         }
 
         Destroy(dummyGO);
-
         hCamAngle = 0;
         vCamAngle = 0;
 
@@ -274,6 +279,17 @@ public class DatasetGenerator : MonoBehaviour
         }
     }
 
+    private void RandomizeLight()
+    {
+        if (lightSource.GetComponent<Light>().type.ToString().Equals("Spot"))
+        {
+            //lightSource.GetComponent<Light>().colorTemperature = UnityEngine.Random.Range(1500f, 20000f);
+            lightSource.GetComponent<Light>().intensity = UnityEngine.Random.Range(50f, 200f);
+            lightSource.transform.position = new Vector3(UnityEngine.Random.Range(-2, 2), lightSource.transform.position.y, UnityEngine.Random.Range(-2, 2));
+            lightSource.transform.LookAt(actualModel.transform);
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -281,6 +297,7 @@ public class DatasetGenerator : MonoBehaviour
 
         if (isDirty)
         {
+            
             RebuildTransforms();
             isDirty = false;
 
@@ -298,26 +315,16 @@ public class DatasetGenerator : MonoBehaviour
 
                 if (toggleRandomizeLightPos.isOn)
                 {
-                    // TODO: randomize light position
-                    if (lightSource.GetComponent<Light>().type.ToString().Equals("Spot"))
-                    {
-                        lightSource.GetComponent<Light>().intensity = UnityEngine.Random.Range(60f, 120f);
-                        lightSource.transform.position = new Vector3(UnityEngine.Random.Range(-2, 2), lightSource.transform.position.y, UnityEngine.Random.Range(-2, 2));
-                        lightSource.transform.LookAt(actualModel.transform);
-                    }
+                    //randomize light position
+                    RandomizeLight();
+                    
            
 
                 }
 
-
-
-
-
-
                 StartCoroutine(TakePhoto());
 
                 //Instantiate a new model and set it as cameraTarget
-                
                 if (toggleRandomizeModel.isOn)
                 {
                     RandomizeModel();

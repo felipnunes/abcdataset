@@ -29,7 +29,7 @@ public class InsectImport : MonoBehaviour
         randomMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
         if (randomMaterial == null)
         {
-            Debug.LogError("RandomMaterial variable is null check if MaterialPath is correct on inspector");
+            Debug.LogError("RandomMaterial variable is null. Check if MaterialPath is correct on inspector");
         }
 
         InstantiateRandomModel();
