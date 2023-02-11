@@ -14,6 +14,11 @@ public class InsectImport : MonoBehaviour
     Material randomMaterial;
     public string materialPath;
 
+    [SerializeField]
+    private int textureWidht = 3;
+    [SerializeField]
+    private int textureHeight = 3;
+
     void Start()
     {      
         rawModelFileNames = System.IO.Directory.GetFiles("Assets/Resources");
@@ -80,8 +85,7 @@ public class InsectImport : MonoBehaviour
     public void AddMaterial(GameObject model)
     {
         
-        int textureWidht = 3;
-        int textureHeight = 3;
+        
 
         Renderer modelRenderer;
         GameObject insectMeshObject;

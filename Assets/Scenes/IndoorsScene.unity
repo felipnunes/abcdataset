@@ -533,7 +533,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &140582584
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -3201,6 +3201,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   materialPath: Assets/Materials/Materials/RandomMaterial.mat
+  textureWidht: 20
+  textureHeight: 20
 --- !u!114 &934295423
 MonoBehaviour:
   m_ObjectHideFlags: 0
