@@ -9,6 +9,8 @@ using UnityEngine.UI;
 
 public class DatasetGenerator : MonoBehaviour
 {
+    private string[] modelFileNames;
+
     // public enum CameraMode { Random, Step };
 
     [Header("Config")]
@@ -45,6 +47,7 @@ public class DatasetGenerator : MonoBehaviour
     public Button buttonAdvancedOptions;
     public Text progressText;
     public GameObject panelCenter;
+    public Dropdown dropdownChooseModel;
 
     [Header("UI elements advanced options")]
     public Toggle toggleRandomizeModel;
@@ -94,6 +97,17 @@ public class DatasetGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
+        modelFileNames = InsectImport.ObjectNameFilter(InsectImport.rawModelFileNames);
+        
+        dropdownChooseModel.options.Clear();
+        foreach (string modelFileName in modelFileNames)
+        {
+            dropdownChooseModel.options.Add(new Dropdown.OptionData() { text = modelFileName });
+        }
+        
+
+
         if (cameraShaded == null)
         {
             Debug.LogError("Invalid camera for shaded object");
@@ -120,7 +134,8 @@ public class DatasetGenerator : MonoBehaviour
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
         buttonGenerateDataset.onClick.AddListener(delegate { OnClickButtonGenerate(); });
         buttonAdvancedOptions.onClick.AddListener(delegate { OnClickButtonAdvancedOptions(); });
-        buttonNormalizeModels.onClick.AddListener(delegate { OnClickButtonNormalizeModels();  });
+        buttonNormalizeModels.onClick.AddListener(delegate { OnClickButtonNormalizeModels(); });
+        dropdownChooseModel.onValueChanged.AddListener(delegate { OnValueChangeDropdownChooseModel(); });
 
         // Force updating the labels of the sliders
         OnValueChangedRadius();
@@ -129,6 +144,8 @@ public class DatasetGenerator : MonoBehaviour
         OnValueChangeDatasetSize();
         OnValueChangeDelay();
     }
+
+  
 
     IEnumerator TakePhoto()
     {
@@ -278,6 +295,7 @@ public class DatasetGenerator : MonoBehaviour
             cameraTarget = actualModel.transform;
         }
     }
+
 
     private void RandomizeLight()
     {
@@ -505,4 +523,24 @@ public class DatasetGenerator : MonoBehaviour
         gameObject.GetComponent<ModelNormalizer>().NormilizeResourcesModels();
     }
 
+    public void OnValueChangeDropdownChooseModel()
+    {
+        if (toggleRandomizeModel.isOn == false)
+        {
+
+
+            gameObject.GetComponent<InsectImport>().destroyActualModel();
+            
+            gameObject.GetComponent<InsectImport>().InstantiateModel(dropdownChooseModel.captionText.text);
+
+            actualModel = GameObject.FindGameObjectWithTag("Model");
+
+            if (actualModel != null)
+            {
+                Debug.Log(actualModel.name);
+                cameraTarget = actualModel.transform;
+            }
+        }
+
+    }
 }

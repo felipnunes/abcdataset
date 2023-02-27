@@ -5,10 +5,11 @@ using System.IO;
 using System;
 using UnityEditor;
 using System.Net.Configuration;
+using static UnityEditor.ShaderGraph.Internal.KeywordDependentCollection;
 
 public class InsectImport : MonoBehaviour
 {
-    string[] rawModelFileNames;
+    public static string[] rawModelFileNames = System.IO.Directory.GetFiles("Assets/Resources");
     string[] modelFileNames;
 
     Material randomMaterial;
@@ -21,7 +22,7 @@ public class InsectImport : MonoBehaviour
 
     void Start()
     {      
-        rawModelFileNames = System.IO.Directory.GetFiles("Assets/Resources");
+
         modelFileNames = ObjectNameFilter(rawModelFileNames);
 
         //Check if materialPath was written on spector 
@@ -41,7 +42,7 @@ public class InsectImport : MonoBehaviour
     }
 
     //Returns .obj names array without the extention ".obj" and removes .meta files from a given array.
-    private string[] ObjectNameFilter(string[] fileNames)
+    public static string[] ObjectNameFilter(string[] fileNames)
     {
         string[] filteredFileNames = new string[fileNames.Length / 2];
 
@@ -68,6 +69,22 @@ public class InsectImport : MonoBehaviour
         AddMaterial(insect);
         Instantiate(insect);
 
+    }
+
+    public void InstantiateModel(string modelName)
+    {
+        foreach (string modelFileName in modelFileNames)
+        {
+            if (modelName.Equals(modelFileName))
+            {
+                GameObject model = Resources.Load<GameObject>(modelName);
+                model.tag = "Model";
+                AddMaterial(model);
+                Instantiate(model);
+                break;
+            }
+        }
+        
     }
 
     //Finds the current instantiated model and destroy it.
