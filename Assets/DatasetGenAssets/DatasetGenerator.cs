@@ -41,6 +41,7 @@ public class DatasetGenerator : MonoBehaviour
     public Toggle toggleCamHalfSphere;
     public Toggle toggleRandomizeCamPos;
     public Toggle toggleRandomizeLightPos;
+    public Toggle toggleLightIsOn;
     public Slider sliderDatasetSize;
     public Slider sliderDelay;
     public Button buttonGenerateDataset;
@@ -130,6 +131,7 @@ public class DatasetGenerator : MonoBehaviour
         sliderVCamStep.onValueChanged.AddListener(delegate { OnValueChangedVCamStep(); });
         toggleCamHalfSphere.onValueChanged.AddListener(delegate { OnValueChangedCamHalfSphere(); });
         toggleRandomizeCamPos.onValueChanged.AddListener(delegate { OnValueChangedRandomizeCamPos(); });
+        toggleLightIsOn.onValueChanged.AddListener(delegate { OnValueChangeLightIsOn(); });
         sliderDatasetSize.onValueChanged.AddListener(delegate { OnValueChangeDatasetSize(); });
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
         buttonGenerateDataset.onClick.AddListener(delegate { OnClickButtonGenerate(); });
@@ -456,6 +458,16 @@ public class DatasetGenerator : MonoBehaviour
         sliderVCamStep.gameObject.SetActive(!toggleRandomizeCamPos.isOn);
 
         isDirty = true;
+    }
+
+    public void OnValueChangeLightIsOn()
+    {
+        if(toggleLightIsOn.isOn == true)
+        {
+            lightSource.GetComponent<Light>().enabled = true;
+            return;
+        }
+        lightSource.GetComponent<Light>().enabled = false;
     }
 
     // OnValueChange event of "Dataset size" slider
