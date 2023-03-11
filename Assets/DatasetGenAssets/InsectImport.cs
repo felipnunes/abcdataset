@@ -156,8 +156,12 @@ public class InsectImport : MonoBehaviour
                 modelRenderer = insectMeshObject.GetComponent<Renderer>();
                 modelRenderer.material = randomMaterial;
                    
-                Debug.Log(modelRenderer.material.name);
                 randomMaterial.mainTexture = texture;
+
+            if (randomMaterial.mainTexture == null)
+            {
+                AddMaterial(model);
+            }
 
 
 
