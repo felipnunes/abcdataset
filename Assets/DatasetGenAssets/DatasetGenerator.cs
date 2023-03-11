@@ -93,6 +93,7 @@ public class DatasetGenerator : MonoBehaviour
     [Header("Camera/light gizmos")]
     public Transform gizmoParent;
     public GameObject gizmoPrefab;
+    public int cameraPerturbationMaxAngle;
     private List<Transform> cameraGizmos = new List<Transform>();
 
     // Start is called before the first frame update
@@ -216,6 +217,7 @@ public class DatasetGenerator : MonoBehaviour
                     UnityEngine.Random.Range(toggleCamHalfSphere.isOn ? 0f : -sliderRadius.value, sliderRadius.value),
                     UnityEngine.Random.Range(-sliderRadius.value, sliderRadius.value));
                 curTransform.LookAt(cameraTarget);
+                AddCameraPerturbtion(curTransform);
                 if (cameraTarget == null)
                 {
                     Debug.LogError("CameraTarget is null");
@@ -285,6 +287,13 @@ public class DatasetGenerator : MonoBehaviour
 
         cameraShaded.transform.position = pr.Position;
         cameraShaded.transform.rotation = pr.Rotation;
+    }
+
+    private void AddCameraPerturbtion(Transform curTransform)
+    {
+        curTransform.Rotate(UnityEngine.Random.Range((float) -cameraPerturbationMaxAngle, (float) cameraPerturbationMaxAngle),
+                            UnityEngine.Random.Range((float)-cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle),
+                            UnityEngine.Random.Range((float)-cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle));
     }
 
     private void RandomizeModel()
