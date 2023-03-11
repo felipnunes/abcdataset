@@ -155,7 +155,7 @@ public class DatasetGenerator : MonoBehaviour
         // Wait for two frames to allow the object to finish instantiating
         yield return null;
         yield return null;
-
+   
         // Take the photo
         SaveTexture();
     }
@@ -357,6 +357,10 @@ public class DatasetGenerator : MonoBehaviour
                 if (toggleRandomizeModel.isOn)
                 {
                     RandomizeModel();
+                }
+                else
+                {
+                    this.GetComponent<InsectImport>().AddMaterial(actualModel);
                 }
 
                 // Go to next image

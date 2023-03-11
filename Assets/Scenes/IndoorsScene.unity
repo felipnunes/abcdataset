@@ -612,7 +612,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!64 &140582584
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -3991,7 +3991,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!154 &903058040
 TerrainCollider:
   m_ObjectHideFlags: 0
@@ -4163,6 +4163,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   materialPath: Assets/Materials/Materials/RandomMaterial.mat
+  texturesPath: Assets/Materials/InsectTextures
   textureWidht: 20
   textureHeight: 20
 --- !u!114 &934295423

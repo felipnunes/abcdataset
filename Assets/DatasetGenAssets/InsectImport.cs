@@ -6,6 +6,7 @@ using System;
 using UnityEditor;
 using System.Net.Configuration;
 using static UnityEditor.ShaderGraph.Internal.KeywordDependentCollection;
+using UnityEngine.Windows;
 
 public class InsectImport : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class InsectImport : MonoBehaviour
 
     Material randomMaterial;
     public string materialPath;
+    public string texturesPath;
 
     [SerializeField]
     private int textureWidht = 3;
@@ -29,6 +31,11 @@ public class InsectImport : MonoBehaviour
         if (materialPath.Equals(""))
         {
             Debug.LogError("MaterialPath variable was not insert");
+        }
+
+        if (texturesPath.Equals(""))
+        {
+            Debug.LogError("TexturesPath variable was not insert");
         }
 
         //Instantiate randomMaterial material from path
@@ -106,35 +113,57 @@ public class InsectImport : MonoBehaviour
 
         Renderer modelRenderer;
         GameObject insectMeshObject;
+        string[] textures = System.IO.Directory.GetFiles(texturesPath);
 
 
         for (int j = 0; j < model.transform.childCount; j++)
         {
             insectMeshObject = model.transform.GetChild(j).gameObject;
 
-            //Creates a new Texture 2d With the specified width and height
-            Texture2D randomTexture = new Texture2D(textureWidht, textureHeight);
+            /*
+           
+                //Creates a new Texture 2d With the specified width and height
+                Texture2D randomTexture = new Texture2D(textureWidht, textureHeight);
 
-            //Generate random pixel values for the texture
-            Color[] pixels = new Color[textureWidht * textureHeight];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                float r = UnityEngine.Random.value;
-                float g = UnityEngine.Random.value;
-                float b = UnityEngine.Random.value;
+                //Generate random pixel values for the texture
+                Color[] pixels = new Color[textureWidht * textureHeight];
+                for (int i = 0; i < pixels.Length; i++)
+                {
+                    float r = UnityEngine.Random.value;
+                    float g = UnityEngine.Random.value;
+                    float b = UnityEngine.Random.value;
 
-                pixels[i] = new Color(r, g, b);
-            }
+                    pixels[i] = new Color(r, g, b);
+                }
 
-            //Set the pixels of the texture and appy the changes
-            randomTexture.SetPixels(pixels);
-            randomTexture.Apply();
+                //Set the pixels of the texture and appy the changes
+                randomTexture.SetPixels(pixels);
+                randomTexture.Apply();
 
-            //Adding material to insect model
-            modelRenderer = insectMeshObject.GetComponent<Renderer>();
-            modelRenderer.material = randomMaterial;
-            randomMaterial.mainTexture = randomTexture;
+                //Adding material to insect model
+                modelRenderer = insectMeshObject.GetComponent<Renderer>();
+                modelRenderer.material = randomMaterial;
+                randomMaterial.mainTexture = randomTexture;
+
+            */
+
+            
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(textures[UnityEngine.Random.Range(0, textures.Length)]);
+
+                
+
+                //Adding material to insect model
+                modelRenderer = insectMeshObject.GetComponent<Renderer>();
+                modelRenderer.material = randomMaterial;
+                   
+                Debug.Log(modelRenderer.material.name);
+                randomMaterial.mainTexture = texture;
+
+
+
+
 
         }
+        
     }
 }
