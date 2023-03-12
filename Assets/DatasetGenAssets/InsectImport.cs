@@ -4,9 +4,7 @@ using UnityEngine;
 using System.IO;
 using System;
 using UnityEditor;
-using System.Net.Configuration;
-using static UnityEditor.ShaderGraph.Internal.KeywordDependentCollection;
-using UnityEngine.Windows;
+
 
 public class InsectImport : MonoBehaviour
 {
@@ -69,8 +67,9 @@ public class InsectImport : MonoBehaviour
     //Instantiate a random model in Resources path.
     public void InstantiateRandomModel()
     {
-       
+
         GameObject insect = Resources.Load<GameObject>(modelFileNames[UnityEngine.Random.Range(0, modelFileNames.Length)]);
+        //GameObject insect = AssetDatabase.LoadAssetAtPath<GameObject>(modelFileNames[UnityEngine.Random.Range(0, modelFileNames.Length)]);
         insect.transform.position = new Vector3(insect.transform.position.x, 0.5f, insect.transform.position.z);
         insect.tag = "Model";
         AddMaterial(insect);
@@ -85,6 +84,7 @@ public class InsectImport : MonoBehaviour
             if (modelName.Equals(modelFileName))
             {
                 GameObject model = Resources.Load<GameObject>(modelName);
+                model.transform.position = new Vector3(model.transform.position.x, 0.5f, model.transform.position.z);
                 model.tag = "Model";
                 AddMaterial(model);
                 Instantiate(model);
