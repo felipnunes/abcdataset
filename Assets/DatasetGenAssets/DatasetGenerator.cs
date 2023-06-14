@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.UI;
 
@@ -22,15 +23,9 @@ public class DatasetGenerator : MonoBehaviour
     public Camera cameraShaded;
     public Camera cameraSketch;
 
+    private int charactereLimit = 200;
+
     public Transform cameraTarget;
-    // public CameraMode cameraUpdateMode; // Can now be read/written from/to toggleRandomizeCamPos.isOn
-
-    // public float hCamStep = 20, vCamStep = 45; //Vertical Step angle [0-90]; horizontal Step angle[0-180]
-    // public bool camHalfSphere = false; //Render only the top view of a half sphere
-    // public float radius = 4.0f; // radius (distance) around object
-
-    // hCamStep, vCamStep, camHalfSphere and radius are now sliderVCamStep.value, sliderHCamStep.value,
-    // toggleCamHalfSphere.isOn, and sliderRadius.value
 
     private float hCamAngle = 0, vCamAngle = 0;
 
@@ -42,6 +37,7 @@ public class DatasetGenerator : MonoBehaviour
     public Toggle toggleRandomizeCamPos;
     public Toggle toggleRandomizeLightPos;
     public Toggle toggleLightIsOn;
+    public Toggle toggleRandomizeTerrain;
     public Slider sliderDatasetSize;
     public Slider sliderDelay;
     public Button buttonGenerateDataset;
@@ -49,6 +45,7 @@ public class DatasetGenerator : MonoBehaviour
     public Text progressText;
     public GameObject panelCenter;
     public Dropdown dropdownChooseModel;
+    public InputField DirectoryInputField;
 
     [Header("UI elements advanced options")]
     public Toggle toggleRandomizeModel;
@@ -66,6 +63,10 @@ public class DatasetGenerator : MonoBehaviour
 
     [Header("Light elements")]
     public GameObject lightSource;
+    public GameObject skyAndFog;
+
+    [Header("Terrain elements")]
+    public Terrain terrain;
 
     private GameObject actualModel;
 
@@ -95,18 +96,15 @@ public class DatasetGenerator : MonoBehaviour
     public GameObject gizmoPrefab;
     public int cameraPerturbationMaxAngle;
     private List<Transform> cameraGizmos = new List<Transform>();
+    public int lightPerturbationMaxAngle;
+    public int skyLuxMinValue;
+    public int skyLuxMaxValue;
 
     // Start is called before the first frame update
     void Start()
     {
 
-        modelFileNames = InsectImport.ObjectNameFilter(InsectImport.rawModelFileNames);
-        
-        dropdownChooseModel.options.Clear();
-        foreach (string modelFileName in modelFileNames)
-        {
-            dropdownChooseModel.options.Add(new Dropdown.OptionData() { text = modelFileName });
-        }
+        DirectoryInputField.characterLimit = charactereLimit;
         
 
 
@@ -133,12 +131,14 @@ public class DatasetGenerator : MonoBehaviour
         toggleCamHalfSphere.onValueChanged.AddListener(delegate { OnValueChangedCamHalfSphere(); });
         toggleRandomizeCamPos.onValueChanged.AddListener(delegate { OnValueChangedRandomizeCamPos(); });
         toggleLightIsOn.onValueChanged.AddListener(delegate { OnValueChangeLightIsOn(); });
+        toggleRandomizeTerrain.onValueChanged.AddListener(delegate { OnValueChangeRandomizeTerrain(); });
         sliderDatasetSize.onValueChanged.AddListener(delegate { OnValueChangeDatasetSize(); });
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
         buttonGenerateDataset.onClick.AddListener(delegate { OnClickButtonGenerate(); });
         buttonAdvancedOptions.onClick.AddListener(delegate { OnClickButtonAdvancedOptions(); });
         buttonNormalizeModels.onClick.AddListener(delegate { OnClickButtonNormalizeModels(); });
         dropdownChooseModel.onValueChanged.AddListener(delegate { OnValueChangeDropdownChooseModel(); });
+        DirectoryInputField.onValueChanged.AddListener(delegate { OnValueChangeDirectoryInputField(); } );
 
         // Force updating the labels of the sliders
         OnValueChangedRadius();
@@ -188,6 +188,17 @@ public class DatasetGenerator : MonoBehaviour
         {
             logger.LogSample(Path.GetFileName(imgPathShaded), "shaded", cameraShaded.transform);
             logger.LogSample(Path.GetFileName(imgPathSketch), "sketch", cameraSketch.transform);
+        }
+    }
+
+    private void RebuildDropDownOptions()
+    {
+        modelFileNames = this.GetComponent<InsectImport>().modelNames;
+
+        dropdownChooseModel.options.Clear();
+        foreach (string modelFileName in modelFileNames)
+        {
+            dropdownChooseModel.options.Add(new Dropdown.OptionData() { text = modelFileName });
         }
     }
 
@@ -291,9 +302,9 @@ public class DatasetGenerator : MonoBehaviour
 
     private void AddCameraPerturbtion(Transform curTransform)
     {
-        curTransform.Rotate(UnityEngine.Random.Range((float) -cameraPerturbationMaxAngle, (float) cameraPerturbationMaxAngle),
-                            UnityEngine.Random.Range((float)-cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle),
-                            UnityEngine.Random.Range((float)-cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle));
+        curTransform.Rotate(UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float) cameraPerturbationMaxAngle),
+                            UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle),
+                            UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle));
     }
 
     private void RandomizeModel()
@@ -310,23 +321,50 @@ public class DatasetGenerator : MonoBehaviour
 
     private void RandomizeLight()
     {
+        //skyAndFog.GetComponent<HDRISky>().desiredLuxValue.value = UnityEngine.Random.Range((float)skyLuxMinValue, (float)skyLuxMaxValue);
+       
+
         if (lightSource.GetComponent<Light>().type.ToString().Equals("Spot"))
         {
             //lightSource.GetComponent<Light>().colorTemperature = UnityEngine.Random.Range(1500f, 20000f);
-            lightSource.GetComponent<Light>().intensity = UnityEngine.Random.Range(50f, 200f);
+            lightSource.GetComponent<Light>().intensity = UnityEngine.Random.Range(500f, 1200f);
             lightSource.transform.position = new Vector3(UnityEngine.Random.Range(-2, 2), lightSource.transform.position.y, UnityEngine.Random.Range(-2, 2));
             lightSource.transform.LookAt(actualModel.transform);
         }
+        else if (lightSource.GetComponent<Light>().type.ToString().Equals("Directional"))
+        {
+            lightSource.transform.LookAt(actualModel.transform);
+            lightSource.transform.Rotate(UnityEngine.Random.Range((float) - lightPerturbationMaxAngle, (float)lightPerturbationMaxAngle),
+                                         UnityEngine.Random.Range((float) - lightPerturbationMaxAngle, (float)lightPerturbationMaxAngle),
+                                         UnityEngine.Random.Range((float) - lightPerturbationMaxAngle, (float)lightPerturbationMaxAngle));
+            
+        }
     }
+
+    private void RandomizeTerrain()
+    {
+        terrain.terrainData.SetHeights(0, 0, TerrainGenerator.GenerateNoise());
+    }
+
+  
 
     // Update is called once per frame
     void Update()
     {
+
+
+
         actualModel = GameObject.FindGameObjectWithTag("Model");
 
         if (isDirty)
         {
+
+            if (dropdownChooseModel.options.Count == 0)
+            {
+                RebuildDropDownOptions();
+            }
             
+
             RebuildTransforms();
             isDirty = false;
 
@@ -346,9 +384,12 @@ public class DatasetGenerator : MonoBehaviour
                 {
                     //randomize light position
                     RandomizeLight();
-                    
-           
+                }
 
+                if (toggleRandomizeTerrain.isOn)
+                {
+                    RandomizeTerrain();
+                    Debug.Log("Tentou mudar o terreno");
                 }
 
                 StartCoroutine(TakePhoto());
@@ -483,6 +524,18 @@ public class DatasetGenerator : MonoBehaviour
         lightSource.GetComponent<Light>().enabled = false;
     }
 
+    public void OnValueChangeRandomizeTerrain()
+    {
+        if (toggleRandomizeTerrain.isOn == true)
+        {
+
+        }
+        else
+        {
+
+        }
+    }
+
     // OnValueChange event of "Dataset size" slider
     public void OnValueChangeDatasetSize()
     {
@@ -550,6 +603,9 @@ public class DatasetGenerator : MonoBehaviour
 
     public void OnValueChangeDropdownChooseModel()
     {
+
+        RebuildDropDownOptions();
+
         if (toggleRandomizeModel.isOn == false)
         {
 
@@ -562,10 +618,15 @@ public class DatasetGenerator : MonoBehaviour
 
             if (actualModel != null)
             {
-                Debug.Log(actualModel.name);
+                
                 cameraTarget = actualModel.transform;
             }
         }
 
+    }
+
+    public void OnValueChangeDirectoryInputField()
+    {
+        datasetPath = DirectoryInputField.textComponent.text;
     }
 }

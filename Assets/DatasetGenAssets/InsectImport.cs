@@ -8,27 +8,42 @@ using UnityEditor;
 
 public class InsectImport : MonoBehaviour
 {
-    public static string[] rawModelFileNames = System.IO.Directory.GetFiles("Assets/Resources");
-    string[] modelFileNames;
+    
+    public string[] modelNames;
+    string[] textureNames;
 
-    Material randomMaterial;
-    public string materialPath;
+    public Material randomMaterial;
     public string texturesPath;
 
-    [SerializeField]
-    private int textureWidht = 3;
-    [SerializeField]
-    private int textureHeight = 3;
-
     void Start()
-    {      
+    {
 
-        modelFileNames = ObjectNameFilter(rawModelFileNames);
+        var texturefiles = Resources.LoadAll("InsectTextures", typeof(Texture2D));
 
-        //Check if materialPath was written on spector 
-        if (materialPath.Equals(""))
+        if (texturefiles != null && texturefiles.Length > 0)
         {
-            Debug.LogError("MaterialPath variable was not insert");
+
+            this.textureNames = new string[texturefiles.Length];
+
+            for (int i = 0; i < texturefiles.Length; i++)
+            {
+                this.textureNames[i] = texturefiles[i].name;
+            }
+        }
+
+
+
+        var modelNames = Resources.LoadAll("Models", typeof(GameObject));
+
+        if (modelNames != null && modelNames.Length > 0)
+        {
+
+            this.modelNames = new string[modelNames.Length];
+
+            for (int i = 0; i < modelNames.Length; i++)
+            {
+                this.modelNames[i] = modelNames[i].name;
+            }
         }
 
         if (texturesPath.Equals(""))
@@ -36,40 +51,19 @@ public class InsectImport : MonoBehaviour
             Debug.LogError("TexturesPath variable was not insert");
         }
 
-        //Instantiate randomMaterial material from path
-        randomMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
-        if (randomMaterial == null)
-        {
-            Debug.LogError("RandomMaterial variable is null. Check if MaterialPath is correct on inspector");
-        }
+        //if (randomMaterial == null)
+        //{
+         //   Debug.LogError("RandomMaterial variable is null. Check if MaterialPath is correct on inspector");
+        //}
 
         InstantiateRandomModel();
-    }
-
-    //Returns .obj names array without the extention ".obj" and removes .meta files from a given array.
-    public static string[] ObjectNameFilter(string[] fileNames)
-    {
-        string[] filteredFileNames = new string[fileNames.Length / 2];
-
-        for (int i = 0, j = 0; i < fileNames.Length; i++)
-        {
-            if (i % 2 == 0)
-            {
-                filteredFileNames[j] = fileNames[i];
-                filteredFileNames[j] = Path.GetFileNameWithoutExtension(fileNames[i]);
-
-                j++;
-            }
-        }
-        return filteredFileNames;
     }
 
     //Instantiate a random model in Resources path.
     public void InstantiateRandomModel()
     {
 
-        GameObject insect = Resources.Load<GameObject>(modelFileNames[UnityEngine.Random.Range(0, modelFileNames.Length)]);
-        //GameObject insect = AssetDatabase.LoadAssetAtPath<GameObject>(modelFileNames[UnityEngine.Random.Range(0, modelFileNames.Length)]);
+        GameObject insect = Resources.Load<GameObject>("Models/" + modelNames[UnityEngine.Random.Range(0, modelNames.Length)]);
         insect.transform.position = new Vector3(insect.transform.position.x, 0.5f, insect.transform.position.z);
         insect.tag = "Model";
         AddMaterial(insect);
@@ -79,11 +73,11 @@ public class InsectImport : MonoBehaviour
 
     public void InstantiateModel(string modelName)
     {
-        foreach (string modelFileName in modelFileNames)
+        foreach (string modelFileName in modelNames)
         {
             if (modelName.Equals(modelFileName))
             {
-                GameObject model = Resources.Load<GameObject>(modelName);
+                GameObject model = Resources.Load<GameObject>("Models/" + modelName);
                 model.transform.position = new Vector3(model.transform.position.x, 0.5f, model.transform.position.z);
                 model.tag = "Model";
                 AddMaterial(model);
@@ -108,53 +102,20 @@ public class InsectImport : MonoBehaviour
     //Add a material and aply the random texture to the new model.
     public void AddMaterial(GameObject model)
     {
-        
-        
 
         Renderer modelRenderer;
         GameObject insectMeshObject;
-        string[] textures = System.IO.Directory.GetFiles(texturesPath);
-
+        
 
         for (int j = 0; j < model.transform.childCount; j++)
         {
             insectMeshObject = model.transform.GetChild(j).gameObject;
 
-            /*
-           
-                //Creates a new Texture 2d With the specified width and height
-                Texture2D randomTexture = new Texture2D(textureWidht, textureHeight);
+            Texture2D texture = Resources.Load<Texture2D>("InsectTextures/" + textureNames[UnityEngine.Random.Range(0, textureNames.Length)]);
 
-                //Generate random pixel values for the texture
-                Color[] pixels = new Color[textureWidht * textureHeight];
-                for (int i = 0; i < pixels.Length; i++)
-                {
-                    float r = UnityEngine.Random.value;
-                    float g = UnityEngine.Random.value;
-                    float b = UnityEngine.Random.value;
-
-                    pixels[i] = new Color(r, g, b);
-                }
-
-                //Set the pixels of the texture and appy the changes
-                randomTexture.SetPixels(pixels);
-                randomTexture.Apply();
-
-                //Adding material to insect model
-                modelRenderer = insectMeshObject.GetComponent<Renderer>();
-                modelRenderer.material = randomMaterial;
-                randomMaterial.mainTexture = randomTexture;
-
-            */
-
-            
-                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(textures[UnityEngine.Random.Range(0, textures.Length)]);
-
-                
-
-                //Adding material to insect model
-                modelRenderer = insectMeshObject.GetComponent<Renderer>();
-                modelRenderer.material = randomMaterial;
+            //Adding material to insect model
+            modelRenderer = insectMeshObject.GetComponent<Renderer>();
+            modelRenderer.material = randomMaterial;
                    
                 randomMaterial.mainTexture = texture;
 
@@ -162,10 +123,6 @@ public class InsectImport : MonoBehaviour
             {
                 AddMaterial(model);
             }
-
-
-
-
 
         }
         
