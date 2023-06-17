@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class TerrainGenerator : MonoBehaviour
@@ -8,14 +9,18 @@ public class TerrainGenerator : MonoBehaviour
     public static int width = 256;
     public static int height = 256;
     public static float scale = 10;
-    Color[] colors;
     Terrain terrain;
+    Texture2D[] groundTextureFiles;
+
     // Start is called before the first frame update
     void Start()
     {
         terrain = GetComponent<Terrain>();
         
         terrain.terrainData.SetHeights(0, 0, GenerateNoise());
+
+        groundTextureFiles = Resources.LoadAll<Texture2D>("GroundTextures");
+        Debug.Log(groundTextureFiles.Length);
     }
 
     public static float[,] GenerateNoise()
@@ -39,8 +44,11 @@ public class TerrainGenerator : MonoBehaviour
         return noise;
     }
 
-    RandomizeTexture()
+    public void RandomizeTexture()
     {
+        Material terrainMaterial = terrain.materialTemplate;
+        terrainMaterial.mainTexture = groundTextureFiles[Random.Range(0,groundTextureFiles.Length)];
+        
 
     }
 

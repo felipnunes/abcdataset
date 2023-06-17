@@ -111,11 +111,11 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 0
   exposure:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0
   multiplier:
     m_OverrideState: 1
-    m_Value: 21.79
+    m_Value: 1
     min: 0
   upperHemisphereLuxValue:
     m_OverrideState: 0

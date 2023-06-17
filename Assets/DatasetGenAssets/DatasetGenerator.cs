@@ -37,6 +37,8 @@ public class DatasetGenerator : MonoBehaviour
     public Toggle toggleRandomizeCamPos;
     public Toggle toggleRandomizeLightPos;
     public Toggle toggleLightIsOn;
+    public Toggle toggleLightTypeGeneral;
+    public Toggle toggleLightTypeSpot;
     public Toggle toggleRandomizeTerrain;
     public Slider sliderDatasetSize;
     public Slider sliderDelay;
@@ -131,6 +133,8 @@ public class DatasetGenerator : MonoBehaviour
         toggleCamHalfSphere.onValueChanged.AddListener(delegate { OnValueChangedCamHalfSphere(); });
         toggleRandomizeCamPos.onValueChanged.AddListener(delegate { OnValueChangedRandomizeCamPos(); });
         toggleLightIsOn.onValueChanged.AddListener(delegate { OnValueChangeLightIsOn(); });
+        toggleLightTypeGeneral.onValueChanged.AddListener(delegate { OnValueChangeLightTypeGeneral(); });
+        toggleLightTypeSpot.onValueChanged.AddListener(delegate { OnValueChangeLightTypeSpot(); });
         toggleRandomizeTerrain.onValueChanged.AddListener(delegate { OnValueChangeRandomizeTerrain(); });
         sliderDatasetSize.onValueChanged.AddListener(delegate { OnValueChangeDatasetSize(); });
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
@@ -344,6 +348,7 @@ public class DatasetGenerator : MonoBehaviour
     private void RandomizeTerrain()
     {
         terrain.terrainData.SetHeights(0, 0, TerrainGenerator.GenerateNoise());
+        terrain.GetComponent<TerrainGenerator>().RandomizeTexture();
     }
 
   
@@ -389,7 +394,8 @@ public class DatasetGenerator : MonoBehaviour
                 if (toggleRandomizeTerrain.isOn)
                 {
                     RandomizeTerrain();
-                    Debug.Log("Tentou mudar o terreno");
+                    
+                    
                 }
 
                 StartCoroutine(TakePhoto());
@@ -522,6 +528,23 @@ public class DatasetGenerator : MonoBehaviour
             return;
         }
         lightSource.GetComponent<Light>().enabled = false;
+    }
+
+
+    public void OnValueChangeLightTypeGeneral()
+    {
+        if (toggleLightTypeGeneral.isOn == true)
+        {
+            lightSource.GetComponent<Light>().type = LightType.Directional;
+        }
+    }
+
+    public void OnValueChangeLightTypeSpot()
+    {
+        if (toggleLightTypeSpot.isOn == true)
+        {
+            lightSource.GetComponent<Light>().type = LightType.Spot;
+        }
     }
 
     public void OnValueChangeRandomizeTerrain()
