@@ -20,7 +20,6 @@ public class TerrainGenerator : MonoBehaviour
         terrain.terrainData.SetHeights(0, 0, GenerateNoise());
 
         groundTextureFiles = Resources.LoadAll<Texture2D>("GroundTextures");
-        Debug.Log(groundTextureFiles.Length);
     }
 
     public static float[,] GenerateNoise()
@@ -48,8 +47,6 @@ public class TerrainGenerator : MonoBehaviour
     {
         Material terrainMaterial = terrain.materialTemplate;
         terrainMaterial.mainTexture = groundTextureFiles[Random.Range(0,groundTextureFiles.Length)];
-        
-
     }
 
     // Update is called once per frame

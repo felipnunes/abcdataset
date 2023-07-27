@@ -395,8 +395,10 @@ public class DatasetGenerator : MonoBehaviour
                 {
                     RandomizeTerrain();
                     
-                    
                 }
+
+                //randomize current HDRI image
+                skyAndFog.GetComponent<HDRIRandomizer>().RandomizeHDRISky();
 
                 StartCoroutine(TakePhoto());
 
