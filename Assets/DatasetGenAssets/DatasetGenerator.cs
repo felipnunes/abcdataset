@@ -41,6 +41,7 @@ public class DatasetGenerator : MonoBehaviour
     public Toggle toggleLightTypeGeneral;
     public Toggle toggleLightTypeSpot;
     public Toggle toggleRandomizeTerrain;
+    public Slider sliderPeaksHeight;
     public Slider sliderDatasetSize;
     public Slider sliderDelay;
     public Button buttonGenerateDataset;
@@ -70,6 +71,7 @@ public class DatasetGenerator : MonoBehaviour
 
     [Header("Terrain elements")]
     public Terrain terrain;
+    public GameObject plane;
 
     private GameObject actualModel;
 
@@ -108,7 +110,7 @@ public class DatasetGenerator : MonoBehaviour
     {
 
         DirectoryInputField.characterLimit = charactereLimit;
-        
+
 
 
         if (cameraShaded == null)
@@ -137,6 +139,7 @@ public class DatasetGenerator : MonoBehaviour
         toggleLightTypeGeneral.onValueChanged.AddListener(delegate { OnValueChangeLightTypeGeneral(); });
         toggleLightTypeSpot.onValueChanged.AddListener(delegate { OnValueChangeLightTypeSpot(); });
         toggleRandomizeTerrain.onValueChanged.AddListener(delegate { OnValueChangeRandomizeTerrain(); });
+        sliderPeaksHeight.onValueChanged.AddListener(delegate { OnValueChangesliderPeaksHeight(); });
         sliderDatasetSize.onValueChanged.AddListener(delegate { OnValueChangeDatasetSize(); });
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
         buttonGenerateDataset.onClick.AddListener(delegate { OnClickButtonGenerate(); });
@@ -348,8 +351,16 @@ public class DatasetGenerator : MonoBehaviour
 
     private void RandomizeTerrain()
     {
-        terrain.terrainData.SetHeights(0, 0, terrain.GetComponent<TerrainGenerator>().GenerateNoise());
-        terrain.GetComponent<TerrainGenerator>().RandomizeTexture();
+        if (terrain.enabled == true)
+        {
+            terrain.terrainData.SetHeights(0, 0, terrain.GetComponent<TerrainGenerator>().GenerateNoise());
+            terrain.GetComponent<TerrainGenerator>().RandomizeTexture();
+        }
+        else if (plane.activeSelf == true)
+        {
+            
+        }
+        
     }
 
   
@@ -559,12 +570,21 @@ public class DatasetGenerator : MonoBehaviour
     {
         if (toggleRandomizeTerrain.isOn == true)
         {
-
+            terrain.gameObject.SetActive(true);
+            plane.SetActive(false);
         }
         else
         {
-
+            terrain.gameObject.SetActive(false);
+            plane.SetActive(true);
         }
+    }
+
+    public void OnValueChangesliderPeaksHeight()
+    {
+        
+        terrain.GetComponent<TerrainGenerator>().peakHeights = sliderPeaksHeight.value;
+        sliderPeaksHeight.transform.GetChild(4).GetComponent<Text>().text = Math.Round(sliderPeaksHeight.value, 2).ToString();
     }
 
     // OnValueChange event of "Dataset size" slider
