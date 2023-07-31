@@ -17,6 +17,7 @@ public class InsectImport : MonoBehaviour
 
     void Start()
     {
+        UnityEngine.Random.InitState(RandomSeedCreator.CreateRandomSeed());
 
         var texturefiles = Resources.LoadAll("InsectTextures", typeof(Texture2D));
 

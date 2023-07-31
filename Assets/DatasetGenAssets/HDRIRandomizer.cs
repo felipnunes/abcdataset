@@ -14,6 +14,7 @@ public class HDRIRandomizer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Random.InitState(RandomSeedCreator.CreateRandomSeed());
         skyList = Resources.LoadAll<Cubemap>("HDRISkys");
 
 
@@ -23,21 +24,16 @@ public class HDRIRandomizer : MonoBehaviour
         {
             hdriSkyComponent = volumeComponent.Add<HDRISky>(false);
         }
-        if (hdriSkyComponent == null)
-        {
-            Debug.Log("hdrSkyComponent = NULL");
-        }
-        else
-        {
-            Debug.Log("hdrSkyComponent = " + hdriSkyComponent);
-        }
 
-        //hdriSky.hdriSky.Override(skyList[Random.Range(0, skyList.Length - 1)]);
+        RandomizeHDRISky();
+       
     }
 
     public void RandomizeHDRISky()
     {
-        hdriSkyComponent.hdriSky.Override(skyList[Random.Range(0, skyList.Length)]);
+        int randomFilePosition = Random.Range(0, skyList.Length);
+        hdriSkyComponent.hdriSky.Override(skyList[randomFilePosition]);
+        //Debug.Log(randomFilePosition);
     }
 
     // Update is called once per frame

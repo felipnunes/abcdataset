@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using UnityEngine;
 
 public class TerrainGenerator : MonoBehaviour
@@ -15,11 +16,15 @@ public class TerrainGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Random.InitState(RandomSeedCreator.CreateRandomSeed());
+
         terrain = GetComponent<Terrain>();
         
         terrain.terrainData.SetHeights(0, 0, GenerateNoise());
 
         groundTextureFiles = Resources.LoadAll<Texture2D>("GroundTextures");
+
+        RandomizeTexture();
     }
 
     public static float[,] GenerateNoise()
@@ -46,7 +51,8 @@ public class TerrainGenerator : MonoBehaviour
     public void RandomizeTexture()
     {
         Material terrainMaterial = terrain.materialTemplate;
-        terrainMaterial.mainTexture = groundTextureFiles[Random.Range(0,groundTextureFiles.Length)];
+        int randomfilePosition = Random.Range(0, groundTextureFiles.Length);
+        terrainMaterial.mainTexture = groundTextureFiles[randomfilePosition];
     }
 
     // Update is called once per frame

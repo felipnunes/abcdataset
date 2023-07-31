@@ -6032,7 +6032,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Light is on
+  m_Text: Global Light
 --- !u!222 &1201534435
 CanvasRenderer:
   m_ObjectHideFlags: 0
