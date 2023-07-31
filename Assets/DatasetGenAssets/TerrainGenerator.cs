@@ -7,9 +7,11 @@ using UnityEngine;
 public class TerrainGenerator : MonoBehaviour
 {
     private Texture2D noiseTexture;
-    public static int width = 256;
-    public static int height = 256;
-    public static float scale = 10;
+    private int width = 256;
+    private int height = 256;
+    private float scale = 10;
+    public float peakHeights = 0f;
+
     Terrain terrain;
     Texture2D[] groundTextureFiles;
 
@@ -27,7 +29,7 @@ public class TerrainGenerator : MonoBehaviour
         RandomizeTexture();
     }
 
-    public static float[,] GenerateNoise()
+    public float[,] GenerateNoise()
     {
         //x and y offsets allow us to "navegate" into the perlin noise texture, like scrolling, witch means we can have a diferent terrain for each function call
         float x_offset = Random.Range(0, 10000);
@@ -42,7 +44,8 @@ public class TerrainGenerator : MonoBehaviour
             {
                 float xCoord = ((float)x / width) * scale + x_offset;
                 float yCoord = ((float)y / height) * scale + y_offset;
-                noise[x, y] = Mathf.PerlinNoise(xCoord, yCoord);
+                //noise[x, y] = Mathf.PerlinNoise(xCoord, yCoord);
+                noise[x, y] = Mathf.Pow(Mathf.PerlinNoise(xCoord, yCoord), peakHeights); // Usando a variável peakHeight para controlar a altura máxima dos picos
             }
         }
         return noise;

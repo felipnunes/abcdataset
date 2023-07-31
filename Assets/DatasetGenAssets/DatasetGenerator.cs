@@ -37,6 +37,7 @@ public class DatasetGenerator : MonoBehaviour
     public Toggle toggleRandomizeCamPos;
     public Toggle toggleRandomizeLightPos;
     public Toggle toggleLightIsOn;
+    public ToggleGroup toggleGroupLightType; 
     public Toggle toggleLightTypeGeneral;
     public Toggle toggleLightTypeSpot;
     public Toggle toggleRandomizeTerrain;
@@ -347,7 +348,7 @@ public class DatasetGenerator : MonoBehaviour
 
     private void RandomizeTerrain()
     {
-        terrain.terrainData.SetHeights(0, 0, TerrainGenerator.GenerateNoise());
+        terrain.terrainData.SetHeights(0, 0, terrain.GetComponent<TerrainGenerator>().GenerateNoise());
         terrain.GetComponent<TerrainGenerator>().RandomizeTexture();
     }
 
@@ -526,8 +527,13 @@ public class DatasetGenerator : MonoBehaviour
     {
         if(toggleLightIsOn.isOn == true)
         {
+            toggleGroupLightType.transform.gameObject.SetActive(true);
             lightSource.GetComponent<Light>().enabled = true;
             return;
+        }
+        else
+        {
+            toggleGroupLightType.transform.gameObject.SetActive(false);
         }
         lightSource.GetComponent<Light>().enabled = false;
     }
