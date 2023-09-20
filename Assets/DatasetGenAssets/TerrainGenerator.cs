@@ -10,7 +10,7 @@ public class TerrainGenerator : MonoBehaviour
     private int width = 256;
     private int height = 256;
     private float scale = 10;
-    public float peakHeights = 0f;
+    public float peakHeights = 1f;
 
     Terrain terrain;
     Texture2D[] groundTextureFiles;

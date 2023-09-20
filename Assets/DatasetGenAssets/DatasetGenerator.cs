@@ -20,6 +20,8 @@ public class DatasetGenerator : MonoBehaviour
     private string shadedPath = "/Sketch";
     private string sketchPath = "/Shaded";
 
+    private string mainRandomizationParameters;
+
     public Camera cameraShaded;
     public Camera cameraSketch;
 
@@ -177,7 +179,9 @@ public class DatasetGenerator : MonoBehaviour
         bufferedTexShaded.ReadPixels(new Rect(0, 0, RenderTexture.active.width, RenderTexture.active.height), 0, 0);
         bufferedTexShaded.Apply();
         RenderTexture.active = null;
-        var imgPathShaded = Path.Combine(datasetPath + shadedPath, timeStamp + "-shaded.png");
+
+
+        var imgPathShaded = Path.Combine(datasetPath + shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp + ".png");
         File.WriteAllBytes(imgPathShaded, bufferedTexShaded.EncodeToPNG());
 
         RenderTexture.active = renderTextureSketch;
@@ -362,15 +366,93 @@ public class DatasetGenerator : MonoBehaviour
         }
         
     }
+    private void RandomizePlane()
+    {
+        plane.GetComponent<PlaneGenerator>().RandomizeTexture();
+    }
 
-  
+    private void ActualizeRandomizationParameters()
+    {
+
+        //Debug.Log("light is on = " + toggleLightIsOn + "  RandomizeTerrain = " + toggleRandomizeTerrain.isOn);
+        //Debug.Log(Mathf.Floor((3f / 6f * sliderDatasetSize.value)) + " " + indexOfCurrentImage);
+
+        //Plane + No Light
+        if (indexOfCurrentImage == 0 || indexOfCurrentImage == sliderDatasetSize.value)
+        {
+            toggleLightIsOn.isOn = false;
+            toggleRandomizeTerrain.isOn = false;
+            Debug.Log("light is on = " + toggleLightIsOn + "  RandomizeTerrain = " + toggleRandomizeTerrain.isOn);
+
+            sliderDelay.value = 150;
+
+            mainRandomizationParameters = "P-NL";
+        }
+
+        //Terrain + No Light
+        if (Mathf.Floor((1f / 6f * sliderDatasetSize.value)) == indexOfCurrentImage)
+        {
+            toggleLightIsOn.isOn = false;
+            toggleRandomizeTerrain.isOn = true;
+
+            sliderDelay.value = 850;
+
+            mainRandomizationParameters = "T-NL";
+        }
+
+        //Plane + General Light
+        if (Mathf.Floor((2f / 6f * sliderDatasetSize.value)) == indexOfCurrentImage)
+        {
+            toggleLightIsOn.isOn = true;
+            toggleLightTypeGeneral.isOn = true;
+            toggleRandomizeTerrain.isOn = false;
+
+            sliderDelay.value = 200;
+
+            mainRandomizationParameters = "P-GL";
+        }
+
+        //Terrain + General Light
+        if (Mathf.Floor((3f / 6f * sliderDatasetSize.value)) == indexOfCurrentImage)
+        {
+            toggleLightIsOn.isOn = true;
+            toggleLightTypeGeneral.isOn = true;
+            toggleRandomizeTerrain.isOn = true;
+
+            sliderDelay.value = 800;
+
+            mainRandomizationParameters = "T-GL";
+        }
+
+        //Plane + Spot Light
+        if (Mathf.Floor((4f / 6f * sliderDatasetSize.value)) == indexOfCurrentImage)
+        {
+            toggleLightIsOn.isOn = true;
+            toggleLightTypeSpot.isOn = true;
+            toggleRandomizeTerrain.isOn = false;
+
+            sliderDelay.value = 200;
+
+            mainRandomizationParameters = "P-SL";
+
+        }
+
+        //Terrain + Spot Light
+        if (Mathf.Floor((5f / 6f * sliderDatasetSize.value)) == indexOfCurrentImage)
+        {
+            toggleLightIsOn.isOn = true;
+            toggleLightTypeSpot.isOn = true;
+            toggleRandomizeTerrain.isOn = true;
+
+            sliderDelay.value = 800;
+
+            mainRandomizationParameters = "T-SL";
+        }
+    }
 
     // Update is called once per frame
     void Update()
     {
-
-
-
         actualModel = GameObject.FindGameObjectWithTag("Model");
 
         if (isDirty)
@@ -380,12 +462,8 @@ public class DatasetGenerator : MonoBehaviour
             {
                 RebuildDropDownOptions();
             }
-            
-
             RebuildTransforms();
             isDirty = false;
-
-            
         }
 
         if (isGenerating)
@@ -393,6 +471,7 @@ public class DatasetGenerator : MonoBehaviour
             // Check delay between images
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
+                ActualizeRandomizationParameters();
                 
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
 
@@ -406,14 +485,19 @@ public class DatasetGenerator : MonoBehaviour
                 if (toggleRandomizeTerrain.isOn)
                 {
                     RandomizeTerrain();
-                    
+               
+                }
+                else
+                {
+                    RandomizePlane();
                 }
 
                 //randomize current HDRI image
                 skyAndFog.GetComponent<HDRIRandomizer>().RandomizeHDRISky();
 
-                StartCoroutine(TakePhoto());
 
+
+                StartCoroutine(TakePhoto());
                 //Instantiate a new model and set it as cameraTarget
                 if (toggleRandomizeModel.isOn)
                 {
@@ -434,7 +518,6 @@ public class DatasetGenerator : MonoBehaviour
                 timeOfLastSave = Time.time;
 
             }
-
             
         }
         
@@ -673,11 +756,13 @@ public class DatasetGenerator : MonoBehaviour
                 cameraTarget = actualModel.transform;
             }
         }
-
+        isDirty = true;
     }
 
     public void OnValueChangeDirectoryInputField()
     {
         datasetPath = DirectoryInputField.textComponent.text;
     }
+
+    
 }

@@ -894,6 +894,7 @@ GameObject:
   - component: {fileID: 140582586}
   - component: {fileID: 140582585}
   - component: {fileID: 140582584}
+  - component: {fileID: 140582588}
   m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
@@ -978,6 +979,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &140582588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 140582583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afe13c58d32ee0543a3a28ed5021aaac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &143336950
 GameObject:
   m_ObjectHideFlags: 0
@@ -7103,9 +7116,9 @@ RectTransform:
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 13.5, y: 0}
-  m_SizeDelta: {x: -27, y: 0}
+  m_AnchorMax: {x: 0.45000002, y: 1}
+  m_AnchoredPosition: {x: 145.5, y: 0}
+  m_SizeDelta: {x: 237, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1290050884
 MonoBehaviour:
@@ -8026,9 +8039,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 473193964}
   m_Direction: 0
   m_MinValue: 1
-  m_MaxValue: 100
+  m_MaxValue: 1000
   m_WholeNumbers: 1
-  m_Value: 10
+  m_Value: 1000
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -9197,7 +9210,7 @@ MonoBehaviour:
   m_MinValue: 1
   m_MaxValue: 10
   m_WholeNumbers: 0
-  m_Value: 4
+  m_Value: 4.6
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -9713,7 +9726,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_IsOn: 1
+  m_IsOn: 0
 --- !u!1 &1890201776
 GameObject:
   m_ObjectHideFlags: 0
@@ -10261,7 +10274,7 @@ MonoBehaviour:
   m_MinValue: 0
   m_MaxValue: 1000
   m_WholeNumbers: 1
-  m_Value: 800
+  m_Value: 250
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
