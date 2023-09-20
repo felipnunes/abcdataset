@@ -4,11 +4,15 @@ using UnityEngine;
 using System.IO;
 using System;
 using UnityEditor;
+using Dummiesman;
 
 
 public class InsectImport : MonoBehaviour
 {
-    
+    //3D models files directory
+    DirectoryInfo modelsDirectory = new DirectoryInfo("C:\\Users\\felip\\Documents\\IC_Projeto\\ModelosTratados");
+    FileInfo[] modelsFileInfo;
+
     public string[] modelNames;
     string[] textureNames;
 
@@ -16,7 +20,7 @@ public class InsectImport : MonoBehaviour
     public string texturesPath;
 
     void Start()
-    {
+    { 
         UnityEngine.Random.InitState(RandomSeedCreator.CreateRandomSeed());
 
         var texturefiles = Resources.LoadAll("InsectTextures", typeof(Texture2D));
@@ -34,18 +38,17 @@ public class InsectImport : MonoBehaviour
 
 
 
-        var modelNames = Resources.LoadAll("Models", typeof(GameObject));
-
-        if (modelNames != null && modelNames.Length > 0)
+        //find all files on modelsDirectory and create a sting[] containing it's names
+        modelsFileInfo = modelsDirectory.GetFiles("*.*");
+        modelNames = new string[modelsFileInfo.Length];
+        for(int i = 0; i < modelsFileInfo.Length; i++)
         {
-
-            this.modelNames = new string[modelNames.Length];
-
-            for (int i = 0; i < modelNames.Length; i++)
-            {
-                this.modelNames[i] = modelNames[i].name;
-            }
+            modelNames[i] = modelsFileInfo[i].FullName;
         }
+        
+        
+
+        
 
         if (texturesPath.Equals(""))
         {
@@ -64,11 +67,12 @@ public class InsectImport : MonoBehaviour
     public void InstantiateRandomModel()
     {
 
-        GameObject insect = Resources.Load<GameObject>("Models/" + modelNames[UnityEngine.Random.Range(0, modelNames.Length)]);
-        insect.transform.position = new Vector3(insect.transform.position.x, 0.5f, insect.transform.position.z);
-        insect.tag = "Model";
-        AddMaterial(insect);
-        Instantiate(insect);
+        GameObject modelToInstatiate = new OBJLoader().Load(modelNames[UnityEngine.Random.Range(0, modelsFileInfo.Length)]);
+
+        modelToInstatiate.transform.position = new Vector3(modelToInstatiate.transform.position.x, 0.5f, modelToInstatiate.transform.position.z);
+        modelToInstatiate.tag = "Model";
+        AddMaterial(modelToInstatiate);
+        Debug.Log(GameObject.FindGameObjectsWithTag("Model").Length);
 
     }
 
@@ -78,11 +82,10 @@ public class InsectImport : MonoBehaviour
         {
             if (modelName.Equals(modelFileName))
             {
-                GameObject model = Resources.Load<GameObject>("Models/" + modelName);
+                GameObject model = new OBJLoader().Load(modelName);
                 model.transform.position = new Vector3(model.transform.position.x, 0.5f, model.transform.position.z);
                 model.tag = "Model";
                 AddMaterial(model);
-                Instantiate(model);
                 break;
             }
         }
@@ -95,6 +98,7 @@ public class InsectImport : MonoBehaviour
         if (GameObject.FindGameObjectWithTag("Model") != null)
         {
             GameObject actualModel = GameObject.FindGameObjectWithTag("Model");
+
             Destroy(actualModel);
         }
     }

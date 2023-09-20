@@ -321,9 +321,10 @@ public class DatasetGenerator : MonoBehaviour
 
     private void RandomizeModel()
     {
-        
         gameObject.GetComponent<InsectImport>().destroyActualModel();
+        
         gameObject.GetComponent<InsectImport>().InstantiateRandomModel();
+        Debug.Log("RandomizeModel function called!");
         if (actualModel != null)
         {
             cameraTarget = actualModel.transform;
@@ -496,12 +497,12 @@ public class DatasetGenerator : MonoBehaviour
                 skyAndFog.GetComponent<HDRIRandomizer>().RandomizeHDRISky();
 
 
-
                 StartCoroutine(TakePhoto());
                 //Instantiate a new model and set it as cameraTarget
                 if (toggleRandomizeModel.isOn)
                 {
-                    RandomizeModel();
+                    Debug.Log("Chamou randomizeModel()");
+;                    RandomizeModel();
                 }
                 else
                 {
