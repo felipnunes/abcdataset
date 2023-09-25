@@ -8,7 +8,7 @@ using System.Numerics;
 
 public class ModelNormalizer : MonoBehaviour
 {
-        string modelsPath = "C:/Users/felip/Documents/IC_Projeto/abcdataset/Assets/Resources";
+        string modelsPath = "C:\\Users\\felip\\Documents\\IC_Projeto\\ModelosTratados";
         string[] rawFileNames;
         string[] fileNamesPath;
         int fileNumber = 0;
@@ -65,9 +65,6 @@ public class ModelNormalizer : MonoBehaviour
     /*Rewrite .OBJ files using normalized vertices*/
     private static void RewriteLines(string[] lines, List<System.Numerics.Vector3> vertices, int numVertices, string fileName)
     {
-            
-        
-
 
             int actualVertice = 0;
             for (int i = 0; i < lines.Length; i++)
