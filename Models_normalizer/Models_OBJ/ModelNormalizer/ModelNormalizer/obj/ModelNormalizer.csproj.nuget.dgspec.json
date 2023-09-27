@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\felip\\Documents\\IC_Projeto\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj": {}
+    "C:\\Users\\felip\\Documents\\IC_Projeto\\abcdataset\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj": {}
   },
   "projects": {
-    "C:\\Users\\felip\\Documents\\IC_Projeto\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj": {
+    "C:\\Users\\felip\\Documents\\IC_Projeto\\abcdataset\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\felip\\Documents\\IC_Projeto\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj",
+        "projectUniqueName": "C:\\Users\\felip\\Documents\\IC_Projeto\\abcdataset\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj",
         "projectName": "ModelNormalizer",
-        "projectPath": "C:\\Users\\felip\\Documents\\IC_Projeto\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj",
+        "projectPath": "C:\\Users\\felip\\Documents\\IC_Projeto\\abcdataset\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\ModelNormalizer.csproj",
         "packagesPath": "C:\\Users\\felip\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\felip\\Documents\\IC_Projeto\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\obj\\",
+        "outputPath": "C:\\Users\\felip\\Documents\\IC_Projeto\\abcdataset\\Models_normalizer\\Models_OBJ\\ModelNormalizer\\ModelNormalizer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\felip\\AppData\\Roaming\\NuGet\\NuGet.Config",

@@ -29,27 +29,29 @@ namespace ModelNormalizerProgram
                 string[] lines = File.ReadAllLines(fileName);
                 List<Vector3> vertices = new List<Vector3>();
                 int numvertices = 0;
-                
+
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    //Garants that the program only interact with vertices
-                    if (lines[i] != "" && lines[i][0].Equals('v'))
-                    {
-                        string[] splitedLine = lines[i].Split(" ");
+                    // Remove espaços em branco no início e no final da linha
+                    string trimmedLine = lines[i].Trim();
 
-                        if (lines[i][2].Equals(' '))
+                    // Garante que o programa só interaja com linhas que começam com "v"
+                    if (trimmedLine.StartsWith("v "))
+                    {
+                        string[] splitedLine = trimmedLine.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                        if (splitedLine.Length >= 4)
                         {
-                            Console.WriteLine(lines[i]);
-                            vertices.Add(new Vector3(float.Parse(splitedLine[2], CultureInfo.InvariantCulture), float.Parse(splitedLine[3], CultureInfo.InvariantCulture), float.Parse(splitedLine[4], CultureInfo.InvariantCulture)));
-                            numvertices++;
-                        }
-                        else if (lines[i][1].Equals(' '))
-                        {
-                            vertices.Add(new Vector3(float.Parse(splitedLine[1], CultureInfo.InvariantCulture), float.Parse(splitedLine[2], CultureInfo.InvariantCulture), float.Parse(splitedLine[3], CultureInfo.InvariantCulture)));
+                            float x = float.Parse(splitedLine[1], CultureInfo.InvariantCulture);
+                            float y = float.Parse(splitedLine[2], CultureInfo.InvariantCulture);
+                            float z = float.Parse(splitedLine[3], CultureInfo.InvariantCulture);
+
+                            vertices.Add(new Vector3(x, y, z));
                             numvertices++;
                         }
                     }
                 }
+
 
                 NormalizeVertices(vertices, numvertices);
                 RewriteLines(lines, vertices, numvertices, fileName);
@@ -70,8 +72,7 @@ namespace ModelNormalizerProgram
                 if (lines[i] != "" && lines[i][0] == 'v' && actualVertice < numVertices)
                 {
                     string[] splitedLine = lines[i].Split(" ");
-
-                    if (lines[i][2].Equals(' '))
+                    if (lines[i][2].Equals(' ') && lines[i][1].Equals(' '))
                     {
                         splitedLine[2] = vertices[actualVertice].X.ToString().Replace(',', '.');
                         splitedLine[3] = vertices[actualVertice].Y.ToString().Replace(',', '.');
