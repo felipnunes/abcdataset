@@ -5332,7 +5332,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df39395eca25b5c48a84a13430f3c644, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  datasetPath: C:\Users\felip\Documents\IC_Projeto\dataset
+  datasetPath: 
   cameraShaded: {fileID: 1828627081}
   cameraSketch: {fileID: 1082366266}
   cameraTarget: {fileID: 140582587}

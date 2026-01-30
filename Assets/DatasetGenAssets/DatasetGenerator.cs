@@ -17,8 +17,8 @@ public class DatasetGenerator : MonoBehaviour
     [Header("Config")]
     public string datasetPath;
 
-    private string shadedPath = "/Sketch";
-    private string sketchPath = "/Shaded";
+    private string shadedPath = "Sketch";
+    private string sketchPath = "Shaded";
 
     private string mainRandomizationParameters;
 
@@ -112,7 +112,8 @@ public class DatasetGenerator : MonoBehaviour
     {
 
         DirectoryInputField.characterLimit = charactereLimit;
-
+        DirectoryInputField.text = "C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\dataset";
+        datasetPath = DirectoryInputField.text;
 
 
         if (cameraShaded == null)
@@ -181,14 +182,15 @@ public class DatasetGenerator : MonoBehaviour
         RenderTexture.active = null;
 
 
-        var imgPathShaded = Path.Combine(datasetPath + shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp + ".png");
+        var imgPathShaded = Path.Combine(datasetPath, shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp + ".png");
+        Debug.Log("esse é o diretório para salvar as imagnens" + imgPathShaded);
         File.WriteAllBytes(imgPathShaded, bufferedTexShaded.EncodeToPNG());
 
         RenderTexture.active = renderTextureSketch;
         bufferedTexSketch.ReadPixels(new Rect(0, 0, RenderTexture.active.width, RenderTexture.active.height), 0, 0);
         bufferedTexSketch.Apply();
         RenderTexture.active = null;
-        var imgPathSketch = Path.Combine(datasetPath + sketchPath, timeStamp + "-sketch.png");
+        var imgPathSketch = Path.Combine(datasetPath, sketchPath, timeStamp + "-sketch.png");
         File.WriteAllBytes(imgPathSketch, bufferedTexSketch.EncodeToPNG());
 
         progressText.text = "Generating " + (indexOfCurrentImage + 1) +
@@ -472,7 +474,7 @@ public class DatasetGenerator : MonoBehaviour
             // Check delay between images
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
-                ActualizeRandomizationParameters();
+                //ActualizeRandomizationParameters();
                 
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
 

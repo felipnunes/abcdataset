@@ -10,7 +10,7 @@ using Dummiesman;
 public class InsectImport : MonoBehaviour
 {
     //3D models files directory
-    DirectoryInfo modelsDirectory = new DirectoryInfo("C:\\Users\\felip\\Documents\\IC_Projeto\\ModelosTratados");
+    DirectoryInfo modelsDirectory = new DirectoryInfo("C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\ModelosTratados");
     FileInfo[] modelsFileInfo;
 
     public string[] modelNames;
