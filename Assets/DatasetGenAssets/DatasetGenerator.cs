@@ -75,7 +75,8 @@ public class DatasetGenerator : MonoBehaviour
     public Terrain terrain;
     public GameObject plane;
 
-    private GameObject actualModel;
+    [HideInInspector]
+    public GameObject actualModel;
 
 
     private Logger logger;

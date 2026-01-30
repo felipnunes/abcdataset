@@ -74,6 +74,8 @@ public class InsectImport : MonoBehaviour
         AddMaterial(modelToInstatiate);
         Debug.Log(GameObject.FindGameObjectsWithTag("Model").Length);
 
+        Logger.
+
     }
 
     public void InstantiateModel(string modelName)
