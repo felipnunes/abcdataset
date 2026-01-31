@@ -69,13 +69,13 @@ public class InsectImport : MonoBehaviour
 
         GameObject modelToInstatiate = new OBJLoader().Load(modelNames[UnityEngine.Random.Range(0, modelsFileInfo.Length)]);
 
+
         modelToInstatiate.transform.position = new Vector3(modelToInstatiate.transform.position.x, 0.5f, modelToInstatiate.transform.position.z);
         modelToInstatiate.tag = "Model";
         AddMaterial(modelToInstatiate);
-        Debug.Log(GameObject.FindGameObjectsWithTag("Model").Length);
 
-        Logger.
-
+        Physics.SyncTransforms();
+        GetComponent<DatasetGenerator>().actualModel = modelToInstatiate;
     }
 
     public void InstantiateModel(string modelName)
@@ -88,6 +88,10 @@ public class InsectImport : MonoBehaviour
                 model.transform.position = new Vector3(model.transform.position.x, 0.5f, model.transform.position.z);
                 model.tag = "Model";
                 AddMaterial(model);
+
+                Physics.SyncTransforms();
+                GetComponent<DatasetGenerator>().actualModel = model;
+
                 break;
             }
         }

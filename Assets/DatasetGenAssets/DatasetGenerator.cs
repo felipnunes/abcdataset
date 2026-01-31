@@ -77,6 +77,8 @@ public class DatasetGenerator : MonoBehaviour
 
     [HideInInspector]
     public GameObject actualModel;
+    public Vector4 actualModelBoundingBox;
+    
 
 
     private Logger logger;
@@ -115,6 +117,8 @@ public class DatasetGenerator : MonoBehaviour
         DirectoryInputField.characterLimit = charactereLimit;
         DirectoryInputField.text = "C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\dataset";
         datasetPath = DirectoryInputField.text;
+
+
 
 
         if (cameraShaded == null)
@@ -169,11 +173,16 @@ public class DatasetGenerator : MonoBehaviour
         yield return null;
    
         // Take the photo
+        GetComponent<Logger>().CalculatesBoundingBox2DPoints();
         SaveTexture();
+        
     }
 
     void SaveTexture()
     {
+
+        
+
         DateTime localDate = DateTime.Now;
         string timeStamp = localDate.ToString("yyyy-MM-dd HH-mm-ss-ffff");
 
@@ -184,7 +193,6 @@ public class DatasetGenerator : MonoBehaviour
 
 
         var imgPathShaded = Path.Combine(datasetPath, shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp + ".png");
-        Debug.Log("esse é o diretório para salvar as imagnens" + imgPathShaded);
         File.WriteAllBytes(imgPathShaded, bufferedTexShaded.EncodeToPNG());
 
         RenderTexture.active = renderTextureSketch;
@@ -201,8 +209,8 @@ public class DatasetGenerator : MonoBehaviour
 
         if (logger)
         {
-            logger.LogSample(Path.GetFileName(imgPathShaded), "shaded", cameraShaded.transform);
-            logger.LogSample(Path.GetFileName(imgPathSketch), "sketch", cameraSketch.transform);
+            logger.LogSample(Path.GetFileName(imgPathShaded), "shaded", cameraShaded.transform, actualModelBoundingBox);
+            logger.LogSample(Path.GetFileName(imgPathSketch), "sketch", cameraSketch.transform, actualModelBoundingBox);
         }
     }
 
@@ -327,7 +335,6 @@ public class DatasetGenerator : MonoBehaviour
         gameObject.GetComponent<InsectImport>().destroyActualModel();
         
         gameObject.GetComponent<InsectImport>().InstantiateRandomModel();
-        Debug.Log("RandomizeModel function called!");
         if (actualModel != null)
         {
             cameraTarget = actualModel.transform;
@@ -501,10 +508,10 @@ public class DatasetGenerator : MonoBehaviour
 
 
                 StartCoroutine(TakePhoto());
+
                 //Instantiate a new model and set it as cameraTarget
                 if (toggleRandomizeModel.isOn)
                 {
-                    Debug.Log("Chamou randomizeModel()");
 ;                    RandomizeModel();
                 }
                 else
