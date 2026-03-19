@@ -20,7 +20,7 @@ TagManager:
   - Not in Reflection
   - CameraSketch
   - Gizmo
-  - 
+  - Moldura
   - 
   - 
   - 
@@ -43,4 +43,7 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Moldura
+    uniqueID: 649515099
     locked: 0

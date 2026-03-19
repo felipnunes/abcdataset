@@ -8,7 +8,7 @@ using System.Numerics;
 
 public class ModelNormalizer : MonoBehaviour
 {
-        string modelsPath = "C:\\Users\\felip\\Documents\\IC_Projeto\\ModelosTratados";
+        string modelsPath = "C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\ModelosNãoTratados";
         string[] rawFileNames;
         string[] fileNamesPath;
         int fileNumber = 0;
@@ -16,9 +16,9 @@ public class ModelNormalizer : MonoBehaviour
     public void NormilizeResourcesModels()
     {
         
-
+            bool needsToFilter = false;
             rawFileNames = System.IO.Directory.GetFiles(modelsPath);
-            fileNamesPath = ObjectFilter(rawFileNames);
+            fileNamesPath = needsToFilter ? ObjectFilter(rawFileNames) : rawFileNames;
 
 
             //Read all files in a modesPath directory
@@ -34,21 +34,14 @@ public class ModelNormalizer : MonoBehaviour
                     for (int i = 0; i < lines.Length; i++)
                     {
                         //Garants that the program only interact with vertices
-                        if (lines[i] != "" && lines[i][0].Equals('v'))
-                        {
                             string[] splitedLine = lines[i].Split(' ');
 
-                            if (lines[i][2].Equals(' '))
-                            {
-                                vertices.Add(new System.Numerics.Vector3(float.Parse(splitedLine[2], CultureInfo.InvariantCulture), float.Parse(splitedLine[3], CultureInfo.InvariantCulture), float.Parse(splitedLine[4], CultureInfo.InvariantCulture)));
-                                numvertices++;
-                            }
-                            else if (lines[i][1].Equals(' '))
-                            {
+                            if (splitedLine[0] == "v") { 
+                            
                                 vertices.Add(new System.Numerics.Vector3(float.Parse(splitedLine[1], CultureInfo.InvariantCulture), float.Parse(splitedLine[2], CultureInfo.InvariantCulture), float.Parse(splitedLine[3], CultureInfo.InvariantCulture)));
                                 numvertices++;
                             }
-                        }
+
                     }
 
                     NormalizeVertices(vertices, numvertices);
@@ -69,25 +62,15 @@ public class ModelNormalizer : MonoBehaviour
             int actualVertice = 0;
             for (int i = 0; i < lines.Length; i++)
             {
-                if (lines[i] != "" && lines[i][0] == 'v' && actualVertice < numVertices)
+                string[] splitedLine = lines[i].Split(' ');
+                if (lines[i] != "" && splitedLine[0] == "v" && actualVertice < numVertices)
                 {
-                    string[] splitedLine = lines[i].Split(' ');
 
-                    if (lines[i][2].Equals(' '))
-                    {
-                        splitedLine[2] = vertices[actualVertice].X.ToString().Replace(',', '.');
-                        splitedLine[3] = vertices[actualVertice].Y.ToString().Replace(',', '.');
-                        splitedLine[4] = vertices[actualVertice].Z.ToString().Replace(',', '.');
-                        lines[i] = "v " + splitedLine[2] + " " + splitedLine[3] + " " + splitedLine[4];
-                    }
-                    else if (lines[i][1].Equals(' '))
-                    {
-                        splitedLine[1] = vertices[actualVertice].X.ToString().Replace(',', '.');
-                        splitedLine[2] = vertices[actualVertice].Y.ToString().Replace(',', '.');
-                        splitedLine[3] = vertices[actualVertice].Z.ToString().Replace(',', '.');
+                    splitedLine[1] = vertices[actualVertice].X.ToString().Replace(',', '.');
+                    splitedLine[2] = vertices[actualVertice].Y.ToString().Replace(',', '.');
+                    splitedLine[3] = vertices[actualVertice].Z.ToString().Replace(',', '.');
 
-                        lines[i] = "v " + splitedLine[1] + " " + splitedLine[2] + " " + splitedLine[3];
-                    }
+                    lines[i] = "v " + splitedLine[1] + " " + splitedLine[2] + " " + splitedLine[3];
 
                     actualVertice++;
                 }

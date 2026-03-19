@@ -181,8 +181,6 @@ public class DatasetGenerator : MonoBehaviour
     void SaveTexture()
     {
 
-        
-
         DateTime localDate = DateTime.Now;
         string timeStamp = localDate.ToString("yyyy-MM-dd HH-mm-ss-ffff");
 
@@ -482,7 +480,8 @@ public class DatasetGenerator : MonoBehaviour
             // Check delay between images
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
-                //ActualizeRandomizationParameters();
+
+                ActualizeRandomizationParameters();  //Activate if you want to generate full datasets
                 
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
 
