@@ -141,18 +141,22 @@ public class InsectImport : MonoBehaviour
         Debug.Log("Numero sorteado = " + model);
 
         splatRenderer.m_Asset = AssetDatabase.LoadAssetAtPath<GaussianSplatAsset>(Path.Combine(splatModelsDirString, splatModelNames[model]));
-
+        GetComponent<DatasetGenerator>().actualModel = splatRenderer.gameObject;
+        splatRenderer.gameObject.tag = "Model";
     }
 
     //Finds the current instantiated model and destroy it.
     public void destroyActualModel()
     {
-        //Checks if there is a mesh model instantiated before trying to destroying it
-        if (GameObject.FindGameObjectWithTag("Model") != null)
+        if(!GetComponent<DatasetGenerator>().splatMode)
         {
-            GameObject actualModel = GameObject.FindGameObjectWithTag("Model");
+            //Checks if there is a mesh model instantiated before trying to destroying it
+            if (GameObject.FindGameObjectWithTag("Model") != null)
+            {
+                GameObject actualModel = GameObject.FindGameObjectWithTag("Model");
 
-            Destroy(actualModel);
+                Destroy(actualModel);
+            }
         }
     }
 
