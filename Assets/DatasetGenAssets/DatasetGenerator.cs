@@ -43,6 +43,8 @@ public class DatasetGenerator : MonoBehaviour
     public Toggle toggleLightTypeGeneral;
     public Toggle toggleLightTypeSpot;
     public Toggle toggleRandomizeTerrain;
+    public Toggle toggleMesh;
+    public Toggle toggleSplat;
     public Slider sliderPeaksHeight;
     public Slider sliderDatasetSize;
     public Slider sliderDelay;
@@ -78,8 +80,9 @@ public class DatasetGenerator : MonoBehaviour
     [HideInInspector]
     public GameObject actualModel;
     public Vector4 actualModelBoundingBox;
-    
 
+
+    public bool splatMode;
 
     private Logger logger;
 
@@ -110,9 +113,28 @@ public class DatasetGenerator : MonoBehaviour
     public int skyLuxMinValue;
     public int skyLuxMaxValue;
 
+
+    private void Awake()
+    {
+        
+    }
+
     // Start is called before the first frame update
     void Start()
     {
+
+        OnValueChangePrimitive(); //sets splatMode based on actual value of primitive mode toggle
+
+        if (!splatMode)
+        {
+            Debug.Log("tentou instanciar modelo mesh aleatório");
+            this.GetComponent<InsectImport>().InstantiateRandomMeshModel();
+        }
+        else
+        {
+            Debug.Log("tentou instanciar modelo splat aleatório");
+            this.GetComponent<InsectImport>().InstantiateRandomSplatModel();
+        }
 
         DirectoryInputField.characterLimit = charactereLimit;
         DirectoryInputField.text = "C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\dataset";
@@ -147,6 +169,8 @@ public class DatasetGenerator : MonoBehaviour
         toggleLightTypeGeneral.onValueChanged.AddListener(delegate { OnValueChangeLightTypeGeneral(); });
         toggleLightTypeSpot.onValueChanged.AddListener(delegate { OnValueChangeLightTypeSpot(); });
         toggleRandomizeTerrain.onValueChanged.AddListener(delegate { OnValueChangeRandomizeTerrain(); });
+        toggleMesh.onValueChanged.AddListener(delegate { OnValueChangePrimitive(); });
+        toggleSplat.onValueChanged.AddListener(delegate { OnValueChangePrimitive(); });
         sliderPeaksHeight.onValueChanged.AddListener(delegate { OnValueChangesliderPeaksHeight(); });
         sliderDatasetSize.onValueChanged.AddListener(delegate { OnValueChangeDatasetSize(); });
         sliderDelay.onValueChanged.AddListener(delegate { OnValueChangeDelay(); });
@@ -214,7 +238,7 @@ public class DatasetGenerator : MonoBehaviour
 
     private void RebuildDropDownOptions()
     {
-        modelFileNames = this.GetComponent<InsectImport>().modelNames;
+        modelFileNames = this.GetComponent<InsectImport>().meshModelNames;
 
         dropdownChooseModel.options.Clear();
         foreach (string modelFileName in modelFileNames)
@@ -324,20 +348,29 @@ public class DatasetGenerator : MonoBehaviour
     private void AddCameraPerturbtion(Transform curTransform)
     {
         curTransform.Rotate(UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float) cameraPerturbationMaxAngle),
-                            UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle),
-                            UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float)cameraPerturbationMaxAngle));
+                            UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float) cameraPerturbationMaxAngle),
+                            UnityEngine.Random.Range((float) - cameraPerturbationMaxAngle, (float) cameraPerturbationMaxAngle));
     }
 
-    private void RandomizeModel()
+    private void RandomizeMeshModel()
     {
         gameObject.GetComponent<InsectImport>().destroyActualModel();
         
-        gameObject.GetComponent<InsectImport>().InstantiateRandomModel();
+        gameObject.GetComponent<InsectImport>().InstantiateRandomMeshModel();
         if (actualModel != null)
         {
             cameraTarget = actualModel.transform;
         }
     }
+
+    public void RandomizeSplatModel()
+    {
+        gameObject.GetComponent<InsectImport>().destroyActualModel();
+        gameObject.GetComponent<InsectImport>().InstantiateRandomSplatModel();
+
+    }
+
+
 
 
     private void RandomizeLight()
@@ -508,14 +541,22 @@ public class DatasetGenerator : MonoBehaviour
 
                 StartCoroutine(TakePhoto());
 
-                //Instantiate a new model and set it as cameraTarget
-                if (toggleRandomizeModel.isOn)
+                if (!splatMode)
                 {
-;                    RandomizeModel();
+                    //Instantiate a new model and set it as cameraTarget
+                    if (toggleRandomizeModel.isOn)
+                    {
+                        RandomizeMeshModel();
+                    }
+                    else
+                    {
+                        this.GetComponent<InsectImport>().AddMaterial(actualModel);
+                    }
                 }
-                else
+                else 
                 {
-                    this.GetComponent<InsectImport>().AddMaterial(actualModel);
+                    RandomizeSplatModel();
+                    Debug.Log("Modo splatting ativado. Nenhum modelo mesh deveria estar visível");
                 }
 
                 // Go to next image
@@ -673,6 +714,20 @@ public class DatasetGenerator : MonoBehaviour
         }
     }
 
+
+    public void OnValueChangePrimitive()
+    {
+        if(toggleMesh.isOn == true)
+        {
+            splatMode = false;
+        }
+        else if(toggleSplat == true)
+        {
+            splatMode = true;
+        }
+    }
+
+
     public void OnValueChangesliderPeaksHeight()
     {
         
@@ -756,7 +811,7 @@ public class DatasetGenerator : MonoBehaviour
 
             gameObject.GetComponent<InsectImport>().destroyActualModel();
             
-            gameObject.GetComponent<InsectImport>().InstantiateModel(dropdownChooseModel.captionText.text);
+            gameObject.GetComponent<InsectImport>().InstantiateMeshModel(dropdownChooseModel.captionText.text);
 
             actualModel = GameObject.FindGameObjectWithTag("Model");
 

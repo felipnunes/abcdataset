@@ -5,23 +5,44 @@ using System.IO;
 using System;
 using UnityEditor;
 using Dummiesman;
+using GaussianSplatting.Runtime;
 
 
 public class InsectImport : MonoBehaviour
 {
     //3D models files directory
-    DirectoryInfo modelsDirectory = new DirectoryInfo("C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\ModelosTratados");
-    FileInfo[] modelsFileInfo;
+    DirectoryInfo meshModelsDir = new DirectoryInfo("C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\ModelosTratados");
+    FileInfo[] meshModelsFileInfo;
 
-    public string[] modelNames;
+    //DirectoryInfo splatModelsDir = new DirectoryInfo("Assets\\GaussianAssets");               //usar para instanciar objetos de fora da pasta assets
+    string splatModelsDirString;
+    DirectoryInfo splatModelsDir;  //only works for folders inside "assets"
+
+
+
+    FileInfo[] splatModelsFileInfo;
+
+    public GaussianSplatRenderer splatRenderer;
+
+    public string[] meshModelNames;
+    public string[] splatModelNames;
     string[] textureNames;
 
     public Material randomMaterial;
     public string texturesPath;
 
-    void Start()
-    { 
-        UnityEngine.Random.InitState(RandomSeedCreator.CreateRandomSeed());
+    private void Awake()
+    {
+
+        splatModelsDirString = "Assets/GaussianAssets";
+        splatModelsDir = new DirectoryInfo(splatModelsDirString); //only works for folders inside "assets"
+
+
+
+        splatRenderer = this.gameObject.GetComponentInChildren<GaussianSplatRenderer>();
+
+
+        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
 
         var texturefiles = Resources.LoadAll("InsectTextures", typeof(Texture2D));
 
@@ -38,17 +59,23 @@ public class InsectImport : MonoBehaviour
 
 
 
-        //find all files on modelsDirectory and create a sting[] containing it's names
-        modelsFileInfo = modelsDirectory.GetFiles("*.*");
-        modelNames = new string[modelsFileInfo.Length];
-        for(int i = 0; i < modelsFileInfo.Length; i++)
+        //find all files on meshModelsDirectory and create a sting[] containing it's names
+        meshModelsFileInfo = meshModelsDir.GetFiles("*.*");
+        meshModelNames = new string[meshModelsFileInfo.Length];
+        for (int i = 0; i < meshModelsFileInfo.Length; i++)
         {
-            modelNames[i] = modelsFileInfo[i].FullName;
+            meshModelNames[i] = meshModelsFileInfo[i].FullName;
         }
-        
-        
 
-        
+        //find all .asset files on splatModelsDirectory and create a string[] containing it's names
+        splatModelsFileInfo = splatModelsDir.GetFiles("*.asset");
+        splatModelNames = new string[splatModelsFileInfo.Length];
+        for (int i = 0; i < splatModelsFileInfo.Length; i++)
+        {
+            splatModelNames[i] = splatModelsFileInfo[i].Name;
+        }
+
+
 
         if (texturesPath.Equals(""))
         {
@@ -57,17 +84,24 @@ public class InsectImport : MonoBehaviour
 
         //if (randomMaterial == null)
         //{
-         //   Debug.LogError("RandomMaterial variable is null. Check if MaterialPath is correct on inspector");
+        //   Debug.LogError("RandomMaterial variable is null. Check if MaterialPath is correct on inspector");
         //}
 
-        InstantiateRandomModel();
     }
 
+    void Start()
+    {
+      
+    }
+
+    
+
+
     //Instantiate a random model in Resources path.
-    public void InstantiateRandomModel()
+    public void InstantiateRandomMeshModel()
     {
 
-        GameObject modelToInstatiate = new OBJLoader().Load(modelNames[UnityEngine.Random.Range(0, modelsFileInfo.Length)]);
+        GameObject modelToInstatiate = new OBJLoader().Load(meshModelNames[UnityEngine.Random.Range(0, meshModelsFileInfo.Length)]);
 
 
         modelToInstatiate.transform.position = new Vector3(modelToInstatiate.transform.position.x, 0.5f, modelToInstatiate.transform.position.z);
@@ -78,9 +112,9 @@ public class InsectImport : MonoBehaviour
         GetComponent<DatasetGenerator>().actualModel = modelToInstatiate;
     }
 
-    public void InstantiateModel(string modelName)
+    public void InstantiateMeshModel(string modelName)
     {
-        foreach (string modelFileName in modelNames)
+        foreach (string modelFileName in meshModelNames)
         {
             if (modelName.Equals(modelFileName))
             {
@@ -98,9 +132,22 @@ public class InsectImport : MonoBehaviour
         
     }
 
+    public void InstantiateRandomSplatModel()
+    {
+
+        int model = UnityEngine.Random.Range(0, splatModelNames.Length);
+        Debug.Log("splatModelNames.Length = " + splatModelNames.Length);
+        Debug.Log("Tentou instanciar o seguinte modelo: " + Path.Combine(splatModelsDirString, splatModelNames[model]));
+        Debug.Log("Numero sorteado = " + model);
+
+        splatRenderer.m_Asset = AssetDatabase.LoadAssetAtPath<GaussianSplatAsset>(Path.Combine(splatModelsDirString, splatModelNames[model]));
+
+    }
+
     //Finds the current instantiated model and destroy it.
     public void destroyActualModel()
     {
+        //Checks if there is a mesh model instantiated before trying to destroying it
         if (GameObject.FindGameObjectWithTag("Model") != null)
         {
             GameObject actualModel = GameObject.FindGameObjectWithTag("Model");

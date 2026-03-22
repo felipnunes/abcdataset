@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b71fae31e6c7d438e8566dc713e666, type: 3}
+  m_Name: geometric_zero_shot_0009
+  m_EditorClassIdentifier: 
+  m_FormatVersion: 20231020
+  m_SplatCount: 145617
+  m_BoundsMin: {x: -0.09942846, y: -0.16238225, z: -0.11570243}
+  m_BoundsMax: {x: 0.1697455, y: 0.013162965, z: 0.10879061}
+  m_DataHash:
+    serializedVersion: 2
+    Hash: e39129a8b3a09e49616ce9794d484041
+  m_PosFormat: 2
+  m_ScaleFormat: 2
+  m_SHFormat: 3
+  m_ColorFormat: 2
+  m_PosData: {fileID: 4900000, guid: fb8d07650a1aaae44b1faf127750f45c, type: 3}
+  m_ColorData: {fileID: 4900000, guid: e2d159f15f1b0be42a6ecbb4819b7d7d, type: 3}
+  m_OtherData: {fileID: 4900000, guid: ca8aebbfdb6bae2499a1a97856e86920, type: 3}
+  m_SHData: {fileID: 4900000, guid: 19dce544b3c35a647aff9fd0b9d08e26, type: 3}
+  m_ChunkData: {fileID: 4900000, guid: 2225007837be6da4bb79b24f28d6beb5, type: 3}
+  m_Cameras: []
