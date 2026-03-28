@@ -127,12 +127,10 @@ public class DatasetGenerator : MonoBehaviour
 
         if (!splatMode)
         {
-            Debug.Log("tentou instanciar modelo mesh aleatório");
             this.GetComponent<InsectImport>().InstantiateRandomMeshModel();
         }
         else
         {
-            Debug.Log("tentou instanciar modelo splat aleatório");
             this.GetComponent<InsectImport>().InstantiateRandomSplatModel();
         }
 
@@ -234,6 +232,9 @@ public class DatasetGenerator : MonoBehaviour
             logger.LogSample(Path.GetFileName(imgPathShaded), "shaded", cameraShaded.transform, actualModelBoundingBox);
             logger.LogSample(Path.GetFileName(imgPathSketch), "sketch", cameraSketch.transform, actualModelBoundingBox);
         }
+
+        logger.CreateYOLOFile(logger.GetYOLOFormat(actualModelBoundingBox, 0), Path.GetFileName(Path.Combine(datasetPath, shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp)));
+
     }
 
     private void RebuildDropDownOptions()
@@ -424,7 +425,6 @@ public class DatasetGenerator : MonoBehaviour
         {
             toggleLightIsOn.isOn = false;
             toggleRandomizeTerrain.isOn = false;
-            Debug.Log("light is on = " + toggleLightIsOn + "  RandomizeTerrain = " + toggleRandomizeTerrain.isOn);
 
             sliderDelay.value = 150;
 
@@ -556,7 +556,6 @@ public class DatasetGenerator : MonoBehaviour
                 else 
                 {
                     RandomizeSplatModel();
-                    Debug.Log("Modo splatting ativado. Nenhum modelo mesh deveria estar visível");
                 }
 
                 // Go to next image
@@ -564,6 +563,7 @@ public class DatasetGenerator : MonoBehaviour
                 if (indexOfCurrentImage == sliderDatasetSize.value)
                 {
                     Reset();
+                    logger.GenerateYOLODatasetFromJSON(); //creates YOLO dataset using JSON arquive
                 }
 
                 timeOfLastSave = Time.time;

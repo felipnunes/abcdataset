@@ -136,9 +136,6 @@ public class InsectImport : MonoBehaviour
     {
 
         int model = UnityEngine.Random.Range(0, splatModelNames.Length);
-        Debug.Log("splatModelNames.Length = " + splatModelNames.Length);
-        Debug.Log("Tentou instanciar o seguinte modelo: " + Path.Combine(splatModelsDirString, splatModelNames[model]));
-        Debug.Log("Numero sorteado = " + model);
 
         splatRenderer.m_Asset = AssetDatabase.LoadAssetAtPath<GaussianSplatAsset>(Path.Combine(splatModelsDirString, splatModelNames[model]));
         GetComponent<DatasetGenerator>().actualModel = splatRenderer.gameObject;

@@ -4,7 +4,7 @@ using GaussianSplatting.Editor;
 
 public class BatchSplatImporter
 {
-    [MenuItem("Tools/Mestrado/Gerar Todos os Assets")]
+    [MenuItem("Tools/Gerar Todos os Assets")]
     public static void Run()
     {
         string plysPath = "C:/Users/felip/Documents/Mestrado/Insetos/SplatModels"; // Onde estão seus PLYs do Colab

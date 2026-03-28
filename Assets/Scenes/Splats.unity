@@ -5815,7 +5815,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   splatRenderer: {fileID: 11400000, guid: 49bc779b4c73f70478588a83870f91d3, type: 2}
-  modelNames: []
+  meshModelNames: []
+  splatModelNames: []
   randomMaterial: {fileID: 2100000, guid: e129c8b3dfc68694a883a2c1a70ef4df, type: 2}
   texturesPath: Assets/Resources/InsectTextures
 --- !u!114 &934295423
@@ -6008,13 +6009,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 957790018}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.00052352226, y: -0.0000063506864, z: -0.9999263, w: -0.012129797}
-  m_LocalPosition: {x: -2.45, y: 2.38, z: -0.12}
-  m_LocalScale: {x: 8.21, y: 8.21, z: 8.209999}
+  m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
+  m_LocalPosition: {x: 0, y: 0.6, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 934295420}
-  m_LocalEulerAnglesHint: {x: 0, y: 0.06, z: -181.39}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
 --- !u!114 &957790020
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6032,7 +6033,7 @@ MonoBehaviour:
   m_SplatScale: 1
   m_OpacityScale: 1
   m_SHOrder: 3
-  m_SHOnly: 1
+  m_SHOnly: 0
   m_SortNthFrame: 1
   m_RenderMode: 0
   m_PointDisplaySize: 3

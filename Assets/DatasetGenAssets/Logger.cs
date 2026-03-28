@@ -31,7 +31,6 @@ public class Logger : MonoBehaviour
     [SerializeField]
     public GameObject boundingBox;
 
-    Vector2 boundingBoxAnchoredPositionPixel;
     RectTransform boundingBoxTransform;
 
     void Start()
@@ -75,14 +74,16 @@ public class Logger : MonoBehaviour
         float height = max_y - min_y;
 
 
-        //Aplly calculated transformations on UI for visualization (Only visual inpact)
+        //Aplly calculated transformations on UI for visualization using pixel positions before converting to YOLO format (Only visual inpact)
         boundingBoxTransform.anchoredPosition = new Vector2(min_x, min_y); // set position
         boundingBoxTransform.sizeDelta = new Vector2(width, height);      // set length
 
-        datasetGen.actualModelBoundingBox = new Vector4 (min_x,min_y,width,height); // Actualize datasetgeneration component value to actual bounding box values
+        datasetGen.actualModelBoundingBox = new Vector4 (min_x,min_y,width,height); // Actualize datasetgeneration component value to actual bounding box values (in YOLO format)
 
         Debug.Log("boundingBox em pixels: " + datasetGen.actualModelBoundingBox);
         Debug.Log("bounding box yolo format: " + GetYOLOFormat(datasetGen.actualModelBoundingBox, 0));
+
+        
 
     }
 
@@ -90,24 +91,61 @@ public class Logger : MonoBehaviour
     //Transforms the 8 world-space corners of the model's bounds into screen-space pixel coordinates related to the shaded camera.
     public List<Vector3> CameraBoundsVec3()
     {
-        Vector3[] actualModelBoundsVec3 = BoundsToVec3(GetActualModelBounds());
-        List<Vector3> actualModelCameraBoundsVec3 = new List<Vector3>();
+        // 1. Pega os limites locais (-1 a 1)
+        Bounds localBounds = GetActualModelBounds();
+        Vector3[] localCorners = BoundsToVec3(localBounds);
 
-        foreach (Vector3 point in actualModelBoundsVec3)
+        List<Vector3> screenPoints = new List<Vector3>();
+
+        // 2. Referência do Transform do modelo que está na cena
+        Transform modelTransform = datasetGen.actualModel.transform;
+
+        foreach (Vector3 localPoint in localCorners)
         {
-            actualModelCameraBoundsVec3.Add(datasetGen.cameraShaded.WorldToScreenPoint(point));
+            // 3. TRADUÇÃO ESSENCIAL: Local -> Mundo
+            Vector3 worldPoint = modelTransform.TransformPoint(localPoint);
+
+            // 4. Projeção: Mundo -> Tela (Pixels)
+            screenPoints.Add(datasetGen.cameraShaded.WorldToScreenPoint(worldPoint));
         }
 
-        return actualModelCameraBoundsVec3;
+        return screenPoints;
     }
 
 
     public Bounds GetActualModelBounds()
     {
-        Debug.Log("A variavel actualModel tem valor: " + datasetGen.actualModel.name);
-        return datasetGen.actualModel.GetComponentInChildren<MeshRenderer>().bounds;
+        if (!gameObject.GetComponent<DatasetGenerator>().splatMode) //works for mesh models
+        {
+            Debug.Log("A variavel actualModel tem valor: " + datasetGen.actualModel.name);
+            return datasetGen.actualModel.GetComponentInChildren<MeshRenderer>().bounds;
+        }
 
+        else //works for splat models
+        {
+            var gsRenderer = datasetGen.actualModel.GetComponentInChildren<GaussianSplatting.Runtime.GaussianSplatRenderer>();
+
+            if (gsRenderer != null && gsRenderer.asset != null)
+            {
+                // O GaussianSplatAsset armazena min e max separadamente
+                Vector3 max = gsRenderer.asset.boundsMax;
+                Vector3 min = gsRenderer.asset.boundsMin;
+
+               
+
+                // Criamos um Bounds do Unity a partir desses pontos
+                Bounds modelBounds = new Bounds();
+                modelBounds.SetMinMax(min, max);
+
+                return modelBounds;
+            }
+
+        }
+
+        return new Bounds(); // Retorna vazio se não encontrar
     }
+
+
 
     public Vector3[] BoundsToVec3(Bounds b)
     {
@@ -127,7 +165,7 @@ public class Logger : MonoBehaviour
     }
 
     //Converts CalculatesBoundingBox2DPoints() into yolo format
-    public string GetYOLOFormat(Vector4 box, int classId)
+    public Vector4 GetYOLOFormat(Vector4 box, int classId)
     {
         //Gets shaded camera width and height
         float targetW = datasetGen.cameraShaded.targetTexture.width;
@@ -139,8 +177,42 @@ public class Logger : MonoBehaviour
         float w = box.z / targetW;
         float h = box.w / targetH;
 
-        return classId.ToString() + " " + x_center.ToString("F6") + " " + y_center.ToString("F6") + " " + w.ToString("F6") + " " + h.ToString("F6");
+        return new Vector4 (x_center, y_center, w,  h);
     }
+
+    // Converts Vector4 to string (YOLO format)
+    public string ConvertToYOLOString(Vector4 yoloBox, int classId)
+    {
+        //Format: <class> <x_center> <y_center> <width> <height>
+        return $"{classId} {yoloBox.x:F6} {yoloBox.y:F6} {yoloBox.z:F6} {yoloBox.w:F6}";
+    }
+
+
+    public void CreateYOLOFile(Vector4 box, string nome)
+    {
+        string labelsPath = Path.Combine(datasetGen.datasetPath, "labels");
+
+        if (!Directory.Exists(labelsPath)) Directory.CreateDirectory(labelsPath);
+
+        string content = ConvertToYOLOString(box, 0);
+
+        //create new .txt
+        string filePath = Path.Combine(labelsPath, nome + ".txt");
+
+        //fills txt with content var
+        //close file
+        File.WriteAllText(filePath, content);
+    }
+
+    //------------------------------------------------------------------------------------------------------------------------
+
+    [ContextMenu("Gerar Dataset YOLO")]
+    public void GenerateYOLODatasetFromJSON()
+    {
+        
+        //Debug.Log();
+        }
+    //------------------------------------------------------------------------------------------------------------------------
 
 
     public void LogSample(string fileName, string label, Transform cameraPose, Vector4 boundingBox){
