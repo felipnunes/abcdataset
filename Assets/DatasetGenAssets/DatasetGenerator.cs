@@ -10,7 +10,8 @@ using UnityEngine.UI;
 
 public class DatasetGenerator : MonoBehaviour
 {
-    private string[] modelFileNames;
+    private string[] meshModelFileNames;
+    private string[] splatModelFileNames;
 
     // public enum CameraMode { Random, Step };
 
@@ -138,22 +139,27 @@ public class DatasetGenerator : MonoBehaviour
         DirectoryInputField.text = "C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\dataset";
         datasetPath = DirectoryInputField.text;
 
-
-
-
+        // CÓDIGO CORRIGIDO:
         if (cameraShaded == null)
         {
             Debug.LogError("Invalid camera for shaded object");
         }
+
         renderTextureShaded = cameraShaded.targetTexture;
-        bufferedTexShaded = new Texture2D(renderTextureShaded.width, renderTextureShaded.height, TextureFormat.RGB24, false);
+        // Alterado o formato para RGBA32 e adicionado explicitamente o parâmetro 'linear: false' no final
+        bufferedTexShaded = new Texture2D(renderTextureShaded.width, renderTextureShaded.height, TextureFormat.RGBA32, false, false);
 
         if (cameraSketch == null)
         {
             Debug.LogError("Invalid camera for sketch object");
         }
+
         renderTextureSketch = cameraSketch.targetTexture;
-        bufferedTexSketch = new Texture2D(renderTextureSketch.width, renderTextureSketch.height, TextureFormat.RGB24, false);
+        // Alterado o formato para RGBA32 e adicionado explicitamente o parâmetro 'linear: false' no final
+        bufferedTexSketch = new Texture2D(renderTextureSketch.width, renderTextureSketch.height, TextureFormat.RGBA32, false, false);
+
+
+
 
         logger = GetComponent<Logger>();
 
@@ -200,32 +206,58 @@ public class DatasetGenerator : MonoBehaviour
         
     }
 
+    
     void SaveTexture()
     {
-
         DateTime localDate = DateTime.Now;
         string timeStamp = localDate.ToString("yyyy-MM-dd HH-mm-ss-ffff");
 
+        // --- PROCESSANDO A CAMERA SHADED ---
         RenderTexture.active = renderTextureShaded;
-        bufferedTexShaded.ReadPixels(new Rect(0, 0, RenderTexture.active.width, RenderTexture.active.height), 0, 0);
+        bufferedTexShaded.ReadPixels(new Rect(0, 0, renderTextureShaded.width, renderTextureShaded.height), 0, 0);
         bufferedTexShaded.Apply();
         RenderTexture.active = null;
 
+        // Correção gama manual para a textura Shaded
+        Color[] pixelsShaded = bufferedTexShaded.GetPixels();
+        for (int i = 0; i < pixelsShaded.Length; i++)
+        {
+            // Converte de Linear para sRGB usando a aproximação matemática padrão (potência de 1/2.2)
+            pixelsShaded[i].r = Mathf.Pow(pixelsShaded[i].r, 1f / 2.2f);
+            pixelsShaded[i].g = Mathf.Pow(pixelsShaded[i].g, 1f / 2.2f);
+            pixelsShaded[i].b = Mathf.Pow(pixelsShaded[i].b, 1f / 2.2f);
+        }
+        bufferedTexShaded.SetPixels(pixelsShaded);
+        bufferedTexShaded.Apply();
 
         var imgPathShaded = Path.Combine(datasetPath, shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp + ".png");
         File.WriteAllBytes(imgPathShaded, bufferedTexShaded.EncodeToPNG());
 
+
+        // --- PROCESSANDO A CAMERA SKETCH ---
         RenderTexture.active = renderTextureSketch;
-        bufferedTexSketch.ReadPixels(new Rect(0, 0, RenderTexture.active.width, RenderTexture.active.height), 0, 0);
+        bufferedTexSketch.ReadPixels(new Rect(0, 0, renderTextureSketch.width, renderTextureSketch.height), 0, 0);
         bufferedTexSketch.Apply();
         RenderTexture.active = null;
+
+        // Correção gama manual para a textura Sketch
+        Color[] pixelsSketch = bufferedTexSketch.GetPixels();
+        for (int i = 0; i < pixelsSketch.Length; i++)
+        {
+            pixelsSketch[i].r = Mathf.Pow(pixelsSketch[i].r, 1f / 2.2f);
+            pixelsSketch[i].g = Mathf.Pow(pixelsSketch[i].g, 1f / 2.2f);
+            pixelsSketch[i].b = Mathf.Pow(pixelsSketch[i].b, 1f / 2.2f);
+        }
+        bufferedTexSketch.SetPixels(pixelsSketch);
+        bufferedTexSketch.Apply();
+
         var imgPathSketch = Path.Combine(datasetPath, sketchPath, timeStamp + "-sketch.png");
         File.WriteAllBytes(imgPathSketch, bufferedTexSketch.EncodeToPNG());
 
-        progressText.text = "Generating " + (indexOfCurrentImage + 1) +
-                            " of " + sliderDatasetSize.value + " ...\n";
-        progressText.text += "Shaded image: " + imgPathShaded + "\n" +
-                             "Sketch image: " + imgPathSketch + "\n";
+
+        // --- UI e Logs (Mantido igual) ---
+        progressText.text = "Generating " + (indexOfCurrentImage + 1) + " of " + sliderDatasetSize.value + " ...\n";
+        progressText.text += "Shaded image: " + imgPathShaded + "\n" + "Sketch image: " + imgPathSketch + "\n";
 
         if (logger)
         {
@@ -234,15 +266,15 @@ public class DatasetGenerator : MonoBehaviour
         }
 
         logger.CreateYOLOFile(logger.GetYOLOFormat(actualModelBoundingBox, 0), Path.GetFileName(Path.Combine(datasetPath, shadedPath, actualModel.name.Replace("(Clone)", "-") + mainRandomizationParameters + timeStamp)));
-
     }
 
     private void RebuildDropDownOptions()
     {
-        modelFileNames = this.GetComponent<InsectImport>().meshModelNames;
+        meshModelFileNames = this.GetComponent<InsectImport>().meshModelNames;
+        splatModelFileNames = this.GetComponent<InsectImport>().splatModelNames.ToArray();
 
         dropdownChooseModel.options.Clear();
-        foreach (string modelFileName in modelFileNames)
+        foreach (string modelFileName in meshModelFileNames)
         {
             dropdownChooseModel.options.Add(new Dropdown.OptionData() { text = modelFileName });
         }
@@ -368,7 +400,20 @@ public class DatasetGenerator : MonoBehaviour
     {
         gameObject.GetComponent<InsectImport>().destroyActualModel();
         gameObject.GetComponent<InsectImport>().InstantiateRandomSplatModel();
+        //Debug.Log("O nome do modelo atual é: " + gameObject.GetComponent<InsectImport>().splatRenderer.m_Asset.name);
 
+    }
+
+    //This function is used when you want to take only one photo for each splat model
+    public void ActualizeSplatModel()
+    {
+        int indice = Array.IndexOf(splatModelFileNames, gameObject.GetComponent<InsectImport>().splatRenderer.m_Asset.name); // finds the vector index of the actual model on splatModelFileNames var.
+        if (gameObject.GetComponent<InsectImport>().splatModelNames.Count > 1) gameObject.GetComponent<InsectImport>().splatModelNames.RemoveAt(indice);
+
+        //Debug.Log(gameObject.GetComponent<InsectImport>().splatModelNames.Count);
+
+        gameObject.GetComponent<InsectImport>().destroyActualModel();
+        gameObject.GetComponent<InsectImport>().InstantiateRandomSplatModel();
     }
 
 
@@ -426,7 +471,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightIsOn.isOn = false;
             toggleRandomizeTerrain.isOn = false;
 
-            sliderDelay.value = 150;
+            sliderDelay.value = 100;
 
             mainRandomizationParameters = "P-NL";
         }
@@ -437,7 +482,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightIsOn.isOn = false;
             toggleRandomizeTerrain.isOn = true;
 
-            sliderDelay.value = 850;
+            sliderDelay.value = 500;
 
             mainRandomizationParameters = "T-NL";
         }
@@ -449,7 +494,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeGeneral.isOn = true;
             toggleRandomizeTerrain.isOn = false;
 
-            sliderDelay.value = 200;
+            sliderDelay.value = 100;
 
             mainRandomizationParameters = "P-GL";
         }
@@ -461,7 +506,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeGeneral.isOn = true;
             toggleRandomizeTerrain.isOn = true;
 
-            sliderDelay.value = 800;
+            sliderDelay.value = 500;
 
             mainRandomizationParameters = "T-GL";
         }
@@ -473,7 +518,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeSpot.isOn = true;
             toggleRandomizeTerrain.isOn = false;
 
-            sliderDelay.value = 200;
+            sliderDelay.value = 150;
 
             mainRandomizationParameters = "P-SL";
 
@@ -486,7 +531,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeSpot.isOn = true;
             toggleRandomizeTerrain.isOn = true;
 
-            sliderDelay.value = 800;
+            sliderDelay.value = 500;
 
             mainRandomizationParameters = "T-SL";
         }
@@ -514,7 +559,7 @@ public class DatasetGenerator : MonoBehaviour
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
 
-                ActualizeRandomizationParameters();  //Activate if you want to generate full datasets
+                //ActualizeRandomizationParameters();  //Activate if you want to generate full datasets
                 
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
 
@@ -555,7 +600,8 @@ public class DatasetGenerator : MonoBehaviour
                 }
                 else 
                 {
-                    RandomizeSplatModel();
+                    RandomizeSplatModel(); //use this if you want to instantiate random models (you won't know how many photos were taken for each splat)
+                    //ActualizeSplatModel(); //use this if you want to take exactly one photo per splat
                 }
 
                 // Go to next image

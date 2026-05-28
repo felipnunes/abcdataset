@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b71fae31e6c7d438e8566dc713e666, type: 3}
+  m_Name: mari2_hires
+  m_EditorClassIdentifier: 
+  m_FormatVersion: 20231020
+  m_SplatCount: 155006
+  m_BoundsMin: {x: -0.94684964, y: -0.5425775, z: -0.2734636}
+  m_BoundsMax: {x: 0.845717, y: 0.014566107, z: 0.7522853}
+  m_DataHash:
+    serializedVersion: 2
+    Hash: 9208fdfe8b4259a2f4bf9a3980c4d116
+  m_PosFormat: 0
+  m_ScaleFormat: 0
+  m_SHFormat: 0
+  m_ColorFormat: 0
+  m_PosData: {fileID: 4900000, guid: 8f50bbe5851edc043a5e775e440122d4, type: 3}
+  m_ColorData: {fileID: 4900000, guid: 2b814c53805a5f4449f4a91002b935fd, type: 3}
+  m_OtherData: {fileID: 4900000, guid: 0a445db5643834c48bb0fd05b974638c, type: 3}
+  m_SHData: {fileID: 4900000, guid: 3b1975ad845947841b80429d36d24dc2, type: 3}
+  m_ChunkData: {fileID: 0}
+  m_Cameras: []

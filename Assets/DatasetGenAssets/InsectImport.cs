@@ -25,7 +25,7 @@ public class InsectImport : MonoBehaviour
     public GaussianSplatRenderer splatRenderer;
 
     public string[] meshModelNames;
-    public string[] splatModelNames;
+    public List<string> splatModelNames;
     string[] textureNames;
 
     public Material randomMaterial;
@@ -69,10 +69,10 @@ public class InsectImport : MonoBehaviour
 
         //find all .asset files on splatModelsDirectory and create a string[] containing it's names
         splatModelsFileInfo = splatModelsDir.GetFiles("*.asset");
-        splatModelNames = new string[splatModelsFileInfo.Length];
+        //splatModelNames = new string[splatModelsFileInfo.Length];
         for (int i = 0; i < splatModelsFileInfo.Length; i++)
         {
-            splatModelNames[i] = splatModelsFileInfo[i].Name;
+            splatModelNames.Add(splatModelsFileInfo[i].Name);
         }
 
 
@@ -135,7 +135,7 @@ public class InsectImport : MonoBehaviour
     public void InstantiateRandomSplatModel()
     {
 
-        int model = UnityEngine.Random.Range(0, splatModelNames.Length);
+        int model = UnityEngine.Random.Range(0, splatModelNames.Count);
 
         splatRenderer.m_Asset = AssetDatabase.LoadAssetAtPath<GaussianSplatAsset>(Path.Combine(splatModelsDirString, splatModelNames[model]));
         GetComponent<DatasetGenerator>().actualModel = splatRenderer.gameObject;
