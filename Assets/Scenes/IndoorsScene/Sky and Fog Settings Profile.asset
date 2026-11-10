@@ -85,7 +85,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59b6606ef2548734bb6d11b9d160bc7e, type: 3}
   m_Name: HDRISky
   m_EditorClassIdentifier: 
-  active: 0
+  active: 1
   rotation:
     m_OverrideState: 0
     m_Value: 0
@@ -118,7 +118,7 @@ MonoBehaviour:
     m_Value: 0
   hdriSky:
     m_OverrideState: 1
-    m_Value: {fileID: 8900000, guid: 2aa69aed6acadbf469f933592a77d3f2, type: 3}
+    m_Value: {fileID: 8900000, guid: 17d3e1b187d51bd43afd29fd6937909a, type: 3}
   distortionMode:
     m_OverrideState: 0
     m_Value: 0

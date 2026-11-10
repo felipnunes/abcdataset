@@ -34,6 +34,9 @@ public class InsectImport : MonoBehaviour
     private void Awake()
     {
 
+        UnityEngine.Random.InitState(System.DateTime.Now.GetHashCode());
+
+
         splatModelsDirString = "Assets/GaussianAssets";
         splatModelsDir = new DirectoryInfo(splatModelsDirString); //only works for folders inside "assets"
 
@@ -42,7 +45,7 @@ public class InsectImport : MonoBehaviour
         splatRenderer = this.gameObject.GetComponentInChildren<GaussianSplatRenderer>();
 
 
-        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
+        
 
         var texturefiles = Resources.LoadAll("InsectTextures", typeof(Texture2D));
 
@@ -100,7 +103,7 @@ public class InsectImport : MonoBehaviour
     //Instantiate a random model in Resources path.
     public void InstantiateRandomMeshModel()
     {
-
+        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
         GameObject modelToInstatiate = new OBJLoader().Load(meshModelNames[UnityEngine.Random.Range(0, meshModelsFileInfo.Length)]);
 
 
@@ -134,6 +137,7 @@ public class InsectImport : MonoBehaviour
 
     public void InstantiateRandomSplatModel()
     {
+        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
 
         int model = UnityEngine.Random.Range(0, splatModelNames.Count);
 

@@ -8,6 +8,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.UI;
 
+using System.Linq;
+
 public class DatasetGenerator : MonoBehaviour
 {
     private string[] meshModelFileNames;
@@ -405,21 +407,54 @@ public class DatasetGenerator : MonoBehaviour
     }
 
     //This function is used when you want to take only one photo for each splat model
+
+
     public void ActualizeSplatModel()
     {
-        int indice = Array.IndexOf(splatModelFileNames, gameObject.GetComponent<InsectImport>().splatRenderer.m_Asset.name); // finds the vector index of the actual model on splatModelFileNames var.
-        if (gameObject.GetComponent<InsectImport>().splatModelNames.Count > 1) gameObject.GetComponent<InsectImport>().splatModelNames.RemoveAt(indice);
+        var insectImport = gameObject.GetComponent<InsectImport>();
 
-        //Debug.Log(gameObject.GetComponent<InsectImport>().splatModelNames.Count);
+        string currentModelName = insectImport.splatRenderer.m_Asset.name;
 
-        gameObject.GetComponent<InsectImport>().destroyActualModel();
-        gameObject.GetComponent<InsectImport>().InstantiateRandomSplatModel();
+        // Procura por um elemento na lista que contenha o nome do asset (ignora extensões ou caminhos)
+        string matchedName = insectImport.splatModelNames.FirstOrDefault(name => name.Contains(currentModelName) || currentModelName.Contains(name));
+
+        if (matchedName != null)
+        {
+            // Se encontrou a correspondência, remove-a usando a string encontrada
+
+            for(int i = 0; i < insectImport.splatModelNames.Count; i++) {
+            
+                Debug.Log(insectImport.splatModelNames[i]);
+            }
+
+            insectImport.splatModelNames.Remove(matchedName);
+        }
+        else
+        {
+            Debug.LogWarning("O modelo atual '" + currentModelName + "' não foi encontrado na lista splatModelNames.");
+        }
+
+        if (insectImport.splatModelNames.Count == 0)
+        {
+            Debug.Log("Todos os modelos foram processados! Interrompendo o gerador...");
+
+            // 1. Desliga o seu gerador aqui. Exemplos dependendo de como seu script funciona:
+            // isGenerating = false; 
+            // StopAllCoroutines(); 
+
+            // 2. Destrói o último modelo da tela para limpar a cena e sai da função imediatamente
+            insectImport.destroyActualModel();
+            return;
+        }
+
+        insectImport.destroyActualModel();
+        insectImport.InstantiateRandomSplatModel();
     }
 
 
 
 
-    private void RandomizeLight()
+private void RandomizeLight()
     {
         //skyAndFog.GetComponent<HDRISky>().desiredLuxValue.value = UnityEngine.Random.Range((float)skyLuxMinValue, (float)skyLuxMaxValue);
        
@@ -471,7 +506,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightIsOn.isOn = false;
             toggleRandomizeTerrain.isOn = false;
 
-            sliderDelay.value = 100;
+            sliderDelay.value = 150;
 
             mainRandomizationParameters = "P-NL";
         }
@@ -482,7 +517,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightIsOn.isOn = false;
             toggleRandomizeTerrain.isOn = true;
 
-            sliderDelay.value = 500;
+            sliderDelay.value = 300;
 
             mainRandomizationParameters = "T-NL";
         }
@@ -494,7 +529,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeGeneral.isOn = true;
             toggleRandomizeTerrain.isOn = false;
 
-            sliderDelay.value = 100;
+            sliderDelay.value = 150;
 
             mainRandomizationParameters = "P-GL";
         }
@@ -506,7 +541,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeGeneral.isOn = true;
             toggleRandomizeTerrain.isOn = true;
 
-            sliderDelay.value = 500;
+            sliderDelay.value = 300;
 
             mainRandomizationParameters = "T-GL";
         }
@@ -531,7 +566,7 @@ public class DatasetGenerator : MonoBehaviour
             toggleLightTypeSpot.isOn = true;
             toggleRandomizeTerrain.isOn = true;
 
-            sliderDelay.value = 500;
+            sliderDelay.value = 300;
 
             mainRandomizationParameters = "T-SL";
         }
@@ -559,7 +594,7 @@ public class DatasetGenerator : MonoBehaviour
             if ((Time.time - timeOfLastSave) * 1000f > sliderDelay.value)
             {
 
-                //ActualizeRandomizationParameters();  //Activate if you want to generate full datasets
+                ActualizeRandomizationParameters();  //Activate if you want to generate full datasets
                 
                 SetCameraTransform(cameraPositionRotation[indexOfCurrentImage]);
 
@@ -600,8 +635,8 @@ public class DatasetGenerator : MonoBehaviour
                 }
                 else 
                 {
-                    RandomizeSplatModel(); //use this if you want to instantiate random models (you won't know how many photos were taken for each splat)
-                    //ActualizeSplatModel(); //use this if you want to take exactly one photo per splat
+                    //RandomizeSplatModel(); //use this if you want to instantiate random models (you won't know how many photos were taken for each splat)
+                    ActualizeSplatModel(); //use this if you want to take exactly one photo per splat
                 }
 
                 // Go to next image

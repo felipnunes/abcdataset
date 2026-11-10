@@ -80,8 +80,8 @@ public class Logger : MonoBehaviour
 
         datasetGen.actualModelBoundingBox = new Vector4 (min_x,min_y,width,height); // Actualize datasetgeneration component value to actual bounding box values (in YOLO format)
 
-        Debug.Log("boundingBox em pixels: " + datasetGen.actualModelBoundingBox);
-        Debug.Log("bounding box yolo format: " + GetYOLOFormat(datasetGen.actualModelBoundingBox, 0));
+        //Debug.Log("boundingBox em pixels: " + datasetGen.actualModelBoundingBox);
+        //Debug.Log("bounding box yolo format: " + GetYOLOFormat(datasetGen.actualModelBoundingBox, 0));
 
         
 

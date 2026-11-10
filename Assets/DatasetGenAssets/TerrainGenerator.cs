@@ -18,7 +18,7 @@ public class TerrainGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Random.InitState(RandomSeedCreator.CreateRandomSeed());
+        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
 
         terrain = GetComponent<Terrain>();
         
@@ -31,6 +31,9 @@ public class TerrainGenerator : MonoBehaviour
 
     public float[,] GenerateNoise()
     {
+
+        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
+
         //x and y offsets allow us to "navegate" into the perlin noise texture, like scrolling, witch means we can have a diferent terrain for each function call
         float x_offset = Random.Range(0, 10000);
         float y_offset = Random.Range(0, 10000);
@@ -53,6 +56,7 @@ public class TerrainGenerator : MonoBehaviour
 
     public void RandomizeTexture()
     {
+        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
         Material terrainMaterial = terrain.materialTemplate;
         int randomfilePosition = Random.Range(0, groundTextureFiles.Length);
         terrainMaterial.mainTexture = groundTextureFiles[randomfilePosition];

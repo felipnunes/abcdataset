@@ -10,7 +10,8 @@ public class BatchSplatImporter
     {
         // 1. CONFIGURAÇÃO DE CAMINHOS
         // Certifique-se de que o caminho termine sem a barra final
-        string plysPath = "C:/Users/felip/Documents/Mestrado/Insetos/SplatModels/Mari2";
+        string plysPath = "C:/Users/felip/Documents/Mestrado/Insetos/ArtigoSibgrapi/.ply usados para gerar os datasets do artigo/Usados (alta variacao)/fly100_RD/fly100_RD";
+                          
         string outPath = "Assets/GaussianAssets";
 
         // Garante que a pasta de destino exista no projeto
