@@ -1,101 +1,146 @@
-using UnityEditor;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using GaussianSplatting.Editor;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
 
-public class BatchSplatImporter
+// Importa√ß√£o em lote de .ply de 3DGS para GaussianSplatAsset.
+//
+// Por que a RAM estourava antes:
+//  1. O pacote vazava o .ply inteiro em mem√≥ria nativa a cada import (NativeArray Persistent nunca
+//     liberado em GaussianFileReader.ReadFile). Corrigido no pacote.
+//  2. Todos os arquivos eram processados num √∫nico frame do Editor: a mem√≥ria tempor√°ria por frame
+//     (Allocator.Temp, objetos aguardando descarga) s√≥ √© liberada entre frames.
+//  3. Cada modelo chamava AssetDatabase.Refresh() global e selecionava o asset criado.
+//
+// Agora: um modelo por frame do Editor (EditorApplication.update), importa√ß√£o s√≥ dos arquivos do
+// modelo, e a cada N modelos SaveAssets + UnloadUnusedAssetsImmediate + GC. A mem√≥ria em uso aparece
+// na barra de progresso e no Console.
+public static class BatchSplatImporter
 {
-    [MenuItem("Tools/Gerar Assets (Vers„o Final Est·vel)")]
+    // 1. CONFIGURA√á√ÉO DE CAMINHOS (sem barra no final)
+    const string kPlysPath = "C:/Users/felip/Documents/Mestrado/Insetos/ArtigoSibgrapi/.ply usados para gerar os datasets do artigo/Usados (alta variacao)/fly100_RD/fly100_RD";
+    const string kOutPath = "Assets/GaussianAssets";
+    const GaussianSplatAssetCreator.DataQuality kQuality = GaussianSplatAssetCreator.DataQuality.VeryHigh;
+
+    // A cada quantos modelos salvar e descarregar o que n√£o est√° em uso
+    const int kCleanupEvery = 5;
+
+    static Queue<string> s_Queue;
+    static int s_Total, s_Done, s_Created, s_Failed, s_SinceCleanup;
+    static long s_StartMemory;
+    static double s_StartTime;
+    static bool s_Running;
+
+    [MenuItem("Tools/Gerar Assets (Vers√£o Final Est√°vel)")]
     public static void Run()
     {
-        // 1. CONFIGURA«√O DE CAMINHOS
-        // Certifique-se de que o caminho termine sem a barra final
-        string plysPath = "C:/Users/felip/Documents/Mestrado/Insetos/ArtigoSibgrapi/.ply usados para gerar os datasets do artigo/Usados (alta variacao)/fly100_RD/fly100_RD";
-                          
-        string outPath = "Assets/GaussianAssets";
-
-        // Garante que a pasta de destino exista no projeto
-        if (!Directory.Exists(outPath))
+        if (s_Running)
         {
-            Directory.CreateDirectory(outPath);
-            AssetDatabase.ImportAsset(outPath);
+            Debug.LogWarning("A importa√ß√£o em lote j√° est√° rodando.");
+            return;
+        }
+        if (!Directory.Exists(kPlysPath))
+        {
+            Debug.LogError("Pasta de .ply n√£o encontrada: " + kPlysPath);
+            return;
+        }
+        if (!Directory.Exists(kOutPath))
+        {
+            Directory.CreateDirectory(kOutPath);
+            AssetDatabase.ImportAsset(kOutPath);
         }
 
-        // 2. BUSCA DE ARQUIVOS
-        string[] arquivos = Directory.GetFiles(plysPath, "*.ply");
-        int totalArquivos = arquivos.Length;
-        int novosProcessados = 0;
+        // 2. BUSCA DE ARQUIVOS (pula os que j√° t√™m .asset)
+        var todos = Directory.GetFiles(kPlysPath, "*.ply").OrderBy(f => f, StringComparer.Ordinal).ToList();
+        var pendentes = todos.Where(f => !File.Exists(Path.Combine(kOutPath, Path.GetFileNameWithoutExtension(f) + ".asset"))).ToList();
 
-        Debug.Log($"--- Iniciando varredura de {totalArquivos} arquivos PLY ---");
+        s_Queue = new Queue<string>(pendentes);
+        s_Total = pendentes.Count;
+        s_Done = s_Created = s_Failed = s_SinceCleanup = 0;
+        s_StartMemory = Profiler.GetTotalAllocatedMemoryLong();
+        s_StartTime = EditorApplication.timeSinceStartup;
 
-        for (int i = 0; i < totalArquivos; i++)
+        Debug.Log($"--- {todos.Count} arquivos PLY encontrados, {s_Total} a importar ({todos.Count - s_Total} j√° existiam) ---");
+        if (s_Total == 0) return;
+
+        s_Running = true;
+        EditorApplication.update += Step;
+    }
+
+    // Processa UM modelo por chamada (um frame do Editor).
+    static void Step()
+    {
+        if (!s_Running) return;
+
+        if (s_Queue.Count == 0)
         {
-            string arquivoAtual = arquivos[i];
-            string nomeSemExtensao = Path.GetFileNameWithoutExtension(arquivoAtual);
-
-            // IMPORTANTE: Verifique se o plugin gera .asset ou .gaussianAsset e ajuste aqui
-            string caminhoAssetEsperado = Path.Combine(outPath, nomeSemExtensao + ".asset");
-
-            // 3. FILTRO DE EXIST NCIA (Pula o que j· foi feito)
-            if (File.Exists(caminhoAssetEsperado))
-            {
-                continue;
-            }
-
-            // 4. FEEDBACK VISUAL E CANCELAMENTO
-            float progresso = (float)i / totalArquivos;
-            bool cancelar = EditorUtility.DisplayCancelableProgressBar(
-                "ImportaÁ„o Massiva 3DGS",
-                $"Processando ({i + 1}/{totalArquivos}): {nomeSemExtensao}",
-                progresso
-            );
-
-            if (cancelar)
-            {
-                Debug.LogWarning("ImportaÁ„o cancelada pelo usu·rio.");
-                break;
-            }
-
-            try
-            {
-                // 5. CRIA«√O DO ASSET
-                // Usamos VeryHigh conforme seu requisito para o YOLO
-                GaussianSplatAssetCreator.CreateAssetSilent(
-                    arquivoAtual,
-                    outPath,
-                    GaussianSplatAssetCreator.DataQuality.VeryHigh
-                );
-
-                // 6. LIMPEZA CRÕTICA DE MEM”RIA (O segredo para n„o travar)
-
-                // Limpa o cache de Undo que acumula dados de malhas e texturas
-                Undo.ClearAll();
-
-                // Descarrega os buffers de memÛria que o plugin deixa abertos
-                EditorUtility.UnloadUnusedAssetsImmediate();
-
-                // ForÁa o Garbage Collector do C# a limpar a RAM imediatamente
-                System.GC.Collect();
-
-                novosProcessados++;
-
-                // 7. SALVAMENTO PERI”DICO NO DISCO
-                // A cada 5 arquivos, forÁa o Unity a escrever no SSD e liberar cache de escrita
-                if (novosProcessados % 5 == 0)
-                {
-                    AssetDatabase.SaveAssets();
-                    Debug.Log($"[Estabilidade] {novosProcessados} novos assets salvos. RAM limpa.");
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"Erro ao processar {nomeSemExtensao}: {e.Message}");
-            }
+            Finish("Processo conclu√≠do");
+            return;
         }
 
-        // 8. FINALIZA«√O
+        string arquivo = s_Queue.Peek();
+        string nome = Path.GetFileNameWithoutExtension(arquivo);
+        long memMB = Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024);
+
+        bool cancelar = EditorUtility.DisplayCancelableProgressBar(
+            "Importa√ß√£o em lote 3DGS",
+            $"({s_Done + 1}/{s_Total}) {nome}   |   mem√≥ria em uso: {memMB} MB",
+            s_Total > 0 ? (float)s_Done / s_Total : 1f);
+        if (cancelar)
+        {
+            Finish("Importa√ß√£o cancelada pelo usu√°rio");
+            return;
+        }
+
+        s_Queue.Dequeue();
+        try
+        {
+            GaussianSplatAssetCreator.CreateAssetSilent(arquivo, kOutPath, kQuality);
+            s_Created++;
+        }
+        catch (Exception e)
+        {
+            s_Failed++;
+            Debug.LogError($"Erro ao processar {nome}: {e.Message}");
+        }
+        s_Done++;
+        s_SinceCleanup++;
+
+        // 3. LIMPEZA PERI√ìDICA (entre frames, quando nada do import anterior est√° mais na pilha)
+        if (s_SinceCleanup >= kCleanupEvery)
+        {
+            s_SinceCleanup = 0;
+            Cleanup();
+            Debug.Log($"[Lote] {s_Done}/{s_Total} | mem√≥ria em uso: {Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024)} MB " +
+                      $"| reservada: {Profiler.GetTotalReservedMemoryLong() / (1024 * 1024)} MB");
+        }
+    }
+
+    static void Cleanup()
+    {
+        AssetDatabase.SaveAssets();
+        Undo.ClearAll();
+        EditorUtility.UnloadUnusedAssetsImmediate(true);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+    }
+
+    static void Finish(string status)
+    {
+        EditorApplication.update -= Step;
+        s_Running = false;
         EditorUtility.ClearProgressBar();
-        AssetDatabase.Refresh(); // Atualiza a Project Window do Unity
-        Debug.Log($"--- Processo concluÌdo! {novosProcessados} novos assets criados ---");
+        Cleanup();
+        AssetDatabase.Refresh();
+
+        double secs = EditorApplication.timeSinceStartup - s_StartTime;
+        long memDelta = (Profiler.GetTotalAllocatedMemoryLong() - s_StartMemory) / (1024 * 1024);
+        Debug.Log($"--- {status}: {s_Created} criados, {s_Failed} com erro, {s_Queue?.Count ?? 0} restantes, " +
+                  $"{secs:F0} s. Varia√ß√£o de mem√≥ria desde o in√≠cio: {memDelta:+#;-#;0} MB ---");
+        s_Queue = null;
     }
 }

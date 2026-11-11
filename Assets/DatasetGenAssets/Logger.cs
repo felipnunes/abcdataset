@@ -1,260 +1,411 @@
-using System.Collections;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using UnityEngine;
+using UnityEngine.UI;
 
-[Serializable]
-public struct CameraPose
-{
-    public Vector3 position;
-    public Quaternion rotation;
-}
-
-[Serializable]
-public struct Sample
-{
-
-    public string fileName;
-    public string label;
-    public CameraPose cameraPose;
-    public Vector4 boundingBox;
-}
-
-//This class Creates and manege logs for machine learning training labeling
+// Calcula as bounding boxes e grava as anotações do dataset (labels YOLO, samples.csv, data.yaml).
 public class Logger : MonoBehaviour
 {
     public bool isLogging = true;
 
     private DatasetGenerator datasetGen;
+    private InsectImport insectImport;
 
     [SerializeField]
-    public GameObject boundingBox;
+    public GameObject boundingBox;          // retângulo de pré-visualização na UI (opcional)
 
-    RectTransform boundingBoxTransform;
+    [Header("Bounding box")]
+    [Tooltip("Splats com sigmoid(opacity) abaixo disso não entram na caixa (floaters quase invisíveis).")]
+    [Range(0f, 1f)] public float minSplatOpacity = 0.1f;
+    [Tooltip("Máximo de pontos projetados por amostra (subamostragem uniforme + extremos de cada eixo).")]
+    public int maxBBoxPoints = 30000;
+    [Tooltip("Margem em pixels: os pontos são centros de gaussianas, sem a extensão de cada splat.")]
+    public float bboxPaddingPx = 2f;
+    [Tooltip("Fração mínima dos pontos dentro da imagem para a amostra ser aceita.")]
+    [Range(0f, 1f)] public float minVisibleFraction = 0.6f;
+    public bool checkOcclusion = true;
+    [Tooltip("Fração máxima de pontos ocultos (terreno/plano) para a amostra ser aceita.")]
+    [Range(0f, 1f)] public float maxOccludedFraction = 0.05f;
+    public int occlusionSamples = 200;
+    [Tooltip("Raio que bate no chão a menos que (este valor × raio do inseto) do ponto não conta como oclusão.")]
+    public float occlusionContactTolerance = 0.05f;
+    [Tooltip("Fração máxima do inseto abaixo do chão (plano/terreno) para a amostra ser aceita.")]
+    [Range(0f, 1f)] public float maxBuriedFraction = 0.5f;
+    public LayerMask occluderMask = ~0;
+
+    public struct BBoxResult
+    {
+        public bool valid;
+        public string reason;
+        public Rect rect;               // pixels, origem no canto INFERIOR esquerdo (convenção Unity), já recortada
+        public float visibleFraction;
+        public float occludedFraction;
+        public float buriedFraction;    // fração dos pontos abaixo do chão (não aparecem na imagem)
+        public string method;
+        public int pointCount;
+    }
+
+    public BBoxResult lastResult;
+
+    // cache da nuvem de pontos do modelo atual
+    private string cachedKey;
+    private Vector3[] cachedPoints;
+    private string cachedMethod;
+
+    // escrita do dataset
+    private StreamWriter samplesWriter;
+    private string runDir;
+
+    public static readonly string[] SampleColumns =
+    {
+        "index", "image", "split", "model", "specimen", "class_id", "condition",
+        "cam_px", "cam_py", "cam_pz", "cam_qx", "cam_qy", "cam_qz", "cam_qw", "cam_distance",
+        "bbox_xmin_px", "bbox_ymin_px_top", "bbox_w_px", "bbox_h_px",
+        "yolo_xc", "yolo_yc", "yolo_w", "yolo_h",
+        "visible_fraction", "occluded_fraction", "bbox_method", "bbox_points", "pose_attempts",
+        "sky", "ground"
+    };
 
     void Start()
     {
         datasetGen = GetComponent<DatasetGenerator>();
+        insectImport = GetComponent<InsectImport>();
         if (datasetGen == null)
         {
             Debug.Log("logger requires a dataset generator component");
             isLogging = false;
         }
 
-        boundingBoxTransform = boundingBox.GetComponent<RectTransform>();
-        boundingBoxTransform.pivot = new Vector2(0,0); //Set pivot to up left on image (necessary for implementing YOLO format intuitively)
-        boundingBoxTransform.anchorMin = new Vector2(0, 0);
-        boundingBoxTransform.anchorMax = new Vector2(0, 0);
+        // O retângulo fica no Canvas original da cena (ligado à câmera shaded, mesmo tamanho da imagem),
+        // então as coordenadas em pixels da imagem servem direto, como no código original.
+        if (boundingBox != null)
+        {
+            boundingBoxTransform = boundingBox.GetComponent<RectTransform>();
+            boundingBoxTransform.pivot = Vector2.zero;
+            boundingBoxTransform.anchorMin = Vector2.zero;
+            boundingBoxTransform.anchorMax = Vector2.zero;
+        }
     }
 
+    private RectTransform boundingBoxTransform;
+
+    // ---------------------------------------------------------------------------------------
+    // BOUNDING BOX
+    // ---------------------------------------------------------------------------------------
+
+    // Mantido por compatibilidade: calcula a caixa para a câmera shaded e atualiza a UI.
     public void CalculatesBoundingBox2DPoints()
     {
-        Debug.Log("CalculatesBoundingBox2DPoints() foi chamada!");
+        var r = ComputeBBox(datasetGen.cameraShaded);
+        UpdateOverlay(r, datasetGen.cameraShaded);
+    }
 
-        List<Vector3> actualModelCameraBounds = CameraBoundsVec3();
+    public BBoxResult ComputeBBox(Camera cam)
+    {
+        var res = new BBoxResult { valid = false, reason = "", method = "" };
+        GameObject model = datasetGen.actualModel;
+        if (model == null || cam == null) { res.reason = "sem_modelo"; lastResult = res; return res; }
 
-        float min_x = float.MaxValue;
-        float max_x = float.MinValue;
-        float min_y = float.MaxValue;
-        float max_y = float.MinValue;
+        Matrix4x4 localToWorld;
+        Vector3[] pts = GetModelPoints(model, out localToWorld, out res.method);
+        if (pts == null || pts.Length == 0) { res.reason = "sem_pontos"; lastResult = res; return res; }
 
-        foreach(Vector3 point in actualModelCameraBounds)
+        float W = cam.pixelWidth, H = cam.pixelHeight;
+        Matrix4x4 vp = cam.projectionMatrix * cam.worldToCameraMatrix;
+        float near = cam.nearClipPlane;
+
+        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+        int inside = 0, behind = 0, buried = 0;
+        var insideWorld = new List<Vector3>(Mathf.Min(pts.Length, 4096));
+        int insideStride = Mathf.Max(1, pts.Length / Mathf.Max(1, occlusionSamples * 4));
+        Vector3 wMin = Vector3.positiveInfinity, wMax = Vector3.negativeInfinity;
+
+        // Chão ativo nesta amostra (plano ou terreno). Partes do inseto abaixo dele não aparecem na imagem:
+        // ficam fora da caixa e não contam como oclusão (antes o plano em y=0.5 "ocultava" a parte de baixo
+        // do inseto, todas as poses com plano eram descartadas e só sobravam imagens com terreno).
+        Terrain groundTerrain = (datasetGen.terrain != null && datasetGen.terrain.gameObject.activeInHierarchy) ? datasetGen.terrain : null;
+        float planeY = (datasetGen.plane != null && datasetGen.plane.activeInHierarchy) ? datasetGen.plane.transform.position.y : float.NegativeInfinity;
+
+        for (int i = 0; i < pts.Length; i++)
         {
-            if (point.z > 0)
+            Vector3 w = localToWorld.MultiplyPoint3x4(pts[i]);
+            if (IsBelowGround(w, groundTerrain, planeY)) { buried++; continue; }
+            wMin = Vector3.Min(wMin, w);
+            wMax = Vector3.Max(wMax, w);
+            Vector4 c = vp * new Vector4(w.x, w.y, w.z, 1f);
+            if (c.w <= near) { behind++; continue; }
+            float sx = (c.x / c.w * 0.5f + 0.5f) * W;
+            float sy = (c.y / c.w * 0.5f + 0.5f) * H;
+            if (sx < minX) minX = sx;
+            if (sx > maxX) maxX = sx;
+            if (sy < minY) minY = sy;
+            if (sy > maxY) maxY = sy;
+            if (sx >= 0 && sx <= W && sy >= 0 && sy <= H)
             {
-                if (point.x < min_x) min_x = point.x;
-                if (point.x > max_x) max_x = point.x;
-                if (point.y < min_y) min_y = point.y;
-                if (point.y > max_y) max_y = point.y;
+                inside++;
+                if (i % insideStride == 0) insideWorld.Add(w);
             }
         }
 
-        float width = max_x - min_x;
-        float height = max_y - min_y;
-
-
-        //Aplly calculated transformations on UI for visualization using pixel positions before converting to YOLO format (Only visual inpact)
-        boundingBoxTransform.anchoredPosition = new Vector2(min_x, min_y); // set position
-        boundingBoxTransform.sizeDelta = new Vector2(width, height);      // set length
-
-        datasetGen.actualModelBoundingBox = new Vector4 (min_x,min_y,width,height); // Actualize datasetgeneration component value to actual bounding box values (in YOLO format)
-
-        //Debug.Log("boundingBox em pixels: " + datasetGen.actualModelBoundingBox);
-        //Debug.Log("bounding box yolo format: " + GetYOLOFormat(datasetGen.actualModelBoundingBox, 0));
-
-        
-
-    }
-
-
-    //Transforms the 8 world-space corners of the model's bounds into screen-space pixel coordinates related to the shaded camera.
-    public List<Vector3> CameraBoundsVec3()
-    {
-        // 1. Pega os limites locais (-1 a 1)
-        Bounds localBounds = GetActualModelBounds();
-        Vector3[] localCorners = BoundsToVec3(localBounds);
-
-        List<Vector3> screenPoints = new List<Vector3>();
-
-        // 2. Refer�ncia do Transform do modelo que est� na cena
-        Transform modelTransform = datasetGen.actualModel.transform;
-
-        foreach (Vector3 localPoint in localCorners)
+        res.pointCount = pts.Length;
+        res.buriedFraction = buried / (float)pts.Length;
+        int aboveGround = pts.Length - buried;
+        if (aboveGround == 0 || res.buriedFraction > maxBuriedFraction)
         {
-            // 3. TRADU��O ESSENCIAL: Local -> Mundo
-            Vector3 worldPoint = modelTransform.TransformPoint(localPoint);
+            res.reason = "abaixo_do_chao";
+            lastResult = res;
+            return res;
+        }
+        res.visibleFraction = inside / (float)aboveGround;
 
-            // 4. Proje��o: Mundo -> Tela (Pixels)
-            screenPoints.Add(datasetGen.cameraShaded.WorldToScreenPoint(worldPoint));
+        if (behind > 0)
+        {
+            res.reason = "camera_dentro_ou_muito_perto";
+            lastResult = res;
+            return res;
         }
 
-        return screenPoints;
-    }
+        // recorte aos limites da imagem + margem
+        float x0 = Mathf.Clamp(minX - bboxPaddingPx, 0, W), x1 = Mathf.Clamp(maxX + bboxPaddingPx, 0, W);
+        float y0 = Mathf.Clamp(minY - bboxPaddingPx, 0, H), y1 = Mathf.Clamp(maxY + bboxPaddingPx, 0, H);
+        res.rect = new Rect(x0, y0, x1 - x0, y1 - y0);
 
+        if (res.rect.width < 1f || res.rect.height < 1f) { res.reason = "fora_do_quadro"; lastResult = res; return res; }
+        if (res.visibleFraction < minVisibleFraction) { res.reason = "pouco_visivel"; lastResult = res; return res; }
 
-    public Bounds GetActualModelBounds()
-    {
-        if (!gameObject.GetComponent<DatasetGenerator>().splatMode) //works for mesh models
+        // oclusão por terreno/plano (raycast da câmera até uma amostra dos pontos visíveis)
+        if (checkOcclusion && insideWorld.Count > 0)
         {
-            Debug.Log("A variavel actualModel tem valor: " + datasetGen.actualModel.name);
-            return datasetGen.actualModel.GetComponentInChildren<MeshRenderer>().bounds;
-        }
-
-        else //works for splat models
-        {
-            var gsRenderer = datasetGen.actualModel.GetComponentInChildren<GaussianSplatting.Runtime.GaussianSplatRenderer>();
-
-            if (gsRenderer != null && gsRenderer.asset != null)
+            Physics.SyncTransforms();
+            int stride = Mathf.Max(1, insideWorld.Count / Mathf.Max(1, occlusionSamples));
+            int tested = 0, occluded = 0;
+            Vector3 camPos = cam.transform.position;
+            // Tolerância de contato: um raio que bate no chão bem junto do ponto (pata encostada no chão)
+            // não é oclusão. Só conta o que está claramente na frente (ex.: um morro do terreno).
+            float contactTol = occlusionContactTolerance * Mathf.Max(1e-4f, (wMax - wMin).magnitude * 0.5f);
+            for (int i = 0; i < insideWorld.Count; i += stride)
             {
-                // O GaussianSplatAsset armazena min e max separadamente
-                Vector3 max = gsRenderer.asset.boundsMax;
-                Vector3 min = gsRenderer.asset.boundsMin;
-
-               
-
-                // Criamos um Bounds do Unity a partir desses pontos
-                Bounds modelBounds = new Bounds();
-                modelBounds.SetMinMax(min, max);
-
-                return modelBounds;
+                Vector3 p = insideWorld[i];
+                Vector3 d = p - camPos;
+                float dist = d.magnitude;
+                tested++;
+                if (Physics.Raycast(camPos, d / dist, out RaycastHit hit, dist * 0.995f, occluderMask, QueryTriggerInteraction.Ignore))
+                {
+                    if (!hit.collider.transform.IsChildOf(model.transform) && dist - hit.distance > contactTol) occluded++;
+                }
             }
-
+            res.occludedFraction = tested > 0 ? occluded / (float)tested : 0f;
+            if (res.occludedFraction > maxOccludedFraction) { res.reason = "ocluido"; lastResult = res; return res; }
         }
 
-        return new Bounds(); // Retorna vazio se n�o encontrar
+        res.valid = true;
+        lastResult = res;
+        return res;
     }
 
-
-
-    public Vector3[] BoundsToVec3(Bounds b)
+    // Retorna os pontos que definem a caixa. Splat: centros das gaussianas lidos do .ply de origem
+    // (espaço local do asset). Malha: vértices em espaço de mundo. Fallback: 8 cantos da AABB do asset.
+    Vector3[] GetModelPoints(GameObject model, out Matrix4x4 localToWorld, out string method)
     {
-        Vector3[] corners = new Vector3[8];
+        localToWorld = Matrix4x4.identity;
+        method = "";
 
-        //The 8 corners combining Min and Max of each axis (X, Y, Z)
-        corners[0] = new Vector3(b.min.x, b.min.y, b.min.z); // Bottom-Left-Front
-        corners[1] = new Vector3(b.min.x, b.min.y, b.max.z); // Bottom-Left-Back
-        corners[2] = new Vector3(b.min.x, b.max.y, b.min.z); // Top-Left-Front
-        corners[3] = new Vector3(b.min.x, b.max.y, b.max.z); // Top-Left-Back
-        corners[4] = new Vector3(b.max.x, b.min.y, b.min.z); // Bottom-Right-Front
-        corners[5] = new Vector3(b.max.x, b.min.y, b.max.z); // Bottom-Right-Back
-        corners[6] = new Vector3(b.max.x, b.max.y, b.min.z); // Top-Right-Front
-        corners[7] = new Vector3(b.max.x, b.max.y, b.max.z); // Top-Right-Back
+        if (datasetGen.splatMode)
+        {
+            var gs = model.GetComponentInChildren<GaussianSplatting.Runtime.GaussianSplatRenderer>();
+            if (gs == null || gs.asset == null) return null;
+            localToWorld = gs.transform.localToWorldMatrix;
+            string key = "splat:" + gs.asset.name;
+            if (key != cachedKey)
+            {
+                cachedKey = key;
+                cachedPoints = null;
+                cachedMethod = "aabb_corners";
+                string ply = insectImport != null ? insectImport.FindPlyForAsset(gs.asset.name) : null;
+                if (ply != null)
+                {
+                    try
+                    {
+                        var cloud = SplatPointCloud.Load(ply, minSplatOpacity, maxBBoxPoints);
+                        if (cloud.MatchAssetBounds(gs.asset.boundsMin, gs.asset.boundsMax, out Vector3 signs))
+                        {
+                            cloud.ApplySigns(signs);
+                            cachedPoints = cloud.points;
+                            cachedMethod = "splat_centers";
+                            if (signs != Vector3.one)
+                                Debug.Log($"[BBox] {gs.asset.name}: eixos invertidos pelo importador detectados {signs}.");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[BBox] A AABB do .ply não bate com os bounds do asset '{gs.asset.name}'. " +
+                                             "O .ply não é o mesmo que gerou o asset? Usando a AABB do asset (caixa conservadora).");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[BBox] Falha ao ler '{ply}': {e.Message}. Usando a AABB do asset.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[BBox] .ply de origem de '{gs.asset.name}' não encontrado (InsectImport.plySourceFolder). " +
+                                     "Usando a AABB do asset (caixa conservadora).");
+                }
 
-        return corners;
+                if (cachedPoints == null)
+                {
+                    var b = new Bounds();
+                    b.SetMinMax(gs.asset.boundsMin, gs.asset.boundsMax);
+                    cachedPoints = BoundsCorners(b);
+                }
+            }
+            method = cachedMethod;
+            return cachedPoints;
+        }
+        else
+        {
+            // Malha: o modelo pode mudar de textura/instância a cada amostra, então recalcula sempre.
+            var filters = model.GetComponentsInChildren<MeshFilter>();
+            var list = new List<Vector3>();
+            foreach (var f in filters)
+            {
+                if (f.sharedMesh == null) continue;
+                var verts = f.sharedMesh.vertices;
+                int step = Mathf.Max(1, verts.Length / Mathf.Max(1, maxBBoxPoints / Mathf.Max(1, filters.Length)));
+                Matrix4x4 m = f.transform.localToWorldMatrix;
+                for (int i = 0; i < verts.Length; i += step) list.Add(m.MultiplyPoint3x4(verts[i]));
+            }
+            cachedKey = null;
+            method = "mesh_vertices";
+            return list.ToArray();
+        }
     }
 
-    //Converts CalculatesBoundingBox2DPoints() into yolo format
+    public void ClearCache() { cachedKey = null; cachedPoints = null; }
+
+    static bool IsBelowGround(Vector3 w, Terrain terrain, float planeY)
+    {
+        if (w.y < planeY) return true;
+        if (terrain != null)
+        {
+            Vector3 tp = terrain.transform.position;
+            Vector3 size = terrain.terrainData.size;
+            // só vale dentro da área do terreno
+            if (w.x >= tp.x && w.x <= tp.x + size.x && w.z >= tp.z && w.z <= tp.z + size.z)
+                if (w.y < terrain.SampleHeight(w) + tp.y) return true;
+        }
+        return false;
+    }
+
+    public static Vector3[] BoundsCorners(Bounds b)
+    {
+        return new[]
+        {
+            new Vector3(b.min.x, b.min.y, b.min.z), new Vector3(b.min.x, b.min.y, b.max.z),
+            new Vector3(b.min.x, b.max.y, b.min.z), new Vector3(b.min.x, b.max.y, b.max.z),
+            new Vector3(b.max.x, b.min.y, b.min.z), new Vector3(b.max.x, b.min.y, b.max.z),
+            new Vector3(b.max.x, b.max.y, b.min.z), new Vector3(b.max.x, b.max.y, b.max.z),
+        };
+    }
+
+    // Mantido por compatibilidade com código antigo.
+    public Vector3[] BoundsToVec3(Bounds b) { return BoundsCorners(b); }
+
+    // Pixels (origem inferior esquerda) -> YOLO normalizado (origem superior esquerda).
+    public static Vector4 ToYOLO(Rect r, float W, float H)
+    {
+        float xc = (r.x + r.width * 0.5f) / W;
+        float yc = 1f - (r.y + r.height * 0.5f) / H;
+        return new Vector4(Mathf.Clamp01(xc), Mathf.Clamp01(yc), Mathf.Clamp01(r.width / W), Mathf.Clamp01(r.height / H));
+    }
+
     public Vector4 GetYOLOFormat(Vector4 box, int classId)
     {
-        //Gets shaded camera width and height
-        float targetW = datasetGen.cameraShaded.targetTexture.width;
-        float targetH = datasetGen.cameraShaded.targetTexture.height;
-
-        //Normalize values based on shaded camera lenght ()
-        float x_center = (box.x + (box.z / 2f)) / targetW;
-        float y_center = 1.0f - ((box.y + (box.w / 2f)) / targetH); //1.0f is necessary because YOLO format considers y = 0 as upLeft on image while unity uses bottomLeft
-        float w = box.z / targetW;
-        float h = box.w / targetH;
-
-        return new Vector4 (x_center, y_center, w,  h);
+        float W = datasetGen.cameraShaded.targetTexture.width, H = datasetGen.cameraShaded.targetTexture.height;
+        return ToYOLO(new Rect(box.x, box.y, box.z, box.w), W, H);
     }
 
-    // Converts Vector4 to string (YOLO format)
-    public string ConvertToYOLOString(Vector4 yoloBox, int classId)
+    // Sempre com ponto decimal (o Windows em pt-BR usaria vírgula e o YOLO não leria o arquivo).
+    public static string ConvertToYOLOString(Vector4 yoloBox, int classId)
     {
-        //Format: <class> <x_center> <y_center> <width> <height>
-        return $"{classId} {yoloBox.x:F6} {yoloBox.y:F6} {yoloBox.z:F6} {yoloBox.w:F6}";
+        var ci = CultureInfo.InvariantCulture;
+        return string.Format(ci, "{0} {1:F6} {2:F6} {3:F6} {4:F6}", classId, yoloBox.x, yoloBox.y, yoloBox.z, yoloBox.w);
     }
 
-
-    public void CreateYOLOFile(Vector4 box, string nome)
+    // Mesmo esquema do código original: posição e tamanho em pixels da imagem (origem inferior esquerda).
+    public void UpdateOverlay(BBoxResult r, Camera cam)
     {
-        string labelsPath = Path.Combine(datasetGen.datasetPath, "labels");
-
-        if (!Directory.Exists(labelsPath)) Directory.CreateDirectory(labelsPath);
-
-        string content = ConvertToYOLOString(box, 0);
-
-        //create new .txt
-        string filePath = Path.Combine(labelsPath, nome + ".txt");
-
-        //fills txt with content var
-        //close file
-        File.WriteAllText(filePath, content);
+        if (boundingBoxTransform == null) return;
+        boundingBox.SetActive(r.valid);
+        if (!r.valid) return;
+        boundingBoxTransform.anchoredPosition = new Vector2(r.rect.x, r.rect.y);
+        boundingBoxTransform.sizeDelta = new Vector2(r.rect.width, r.rect.height);
     }
 
-    //------------------------------------------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------
+    // ESCRITA DO DATASET
+    // ---------------------------------------------------------------------------------------
 
-    [ContextMenu("Gerar Dataset YOLO")]
-    public void GenerateYOLODatasetFromJSON()
+    public void BeginRun(string dir, IList<string> classNames, bool withSketch)
     {
-        
-        //Debug.Log();
-        }
-    //------------------------------------------------------------------------------------------------------------------------
+        runDir = dir;
+        foreach (string sub in new[] { "images/train", "images/val", "labels/train", "labels/val" })
+            Directory.CreateDirectory(Path.Combine(runDir, sub));
+        if (withSketch) Directory.CreateDirectory(Path.Combine(runDir, "sketch"));
 
+        // data.yaml (Ultralytics)
+        var sb = new StringBuilder();
+        sb.AppendLine("path: " + runDir.Replace('\\', '/'));
+        sb.AppendLine("train: images/train");
+        sb.AppendLine("val: images/val");
+        sb.AppendLine("names:");
+        for (int i = 0; i < classNames.Count; i++) sb.AppendLine($"  {i}: {classNames[i]}");
+        File.WriteAllText(Path.Combine(runDir, "data.yaml"), sb.ToString());
 
-    public void LogSample(string fileName, string label, Transform cameraPose, Vector4 boundingBox){
+        samplesWriter = new StreamWriter(Path.Combine(runDir, "samples.csv"), false, new UTF8Encoding(false));
+        samplesWriter.AutoFlush = true; // uma execução interrompida continua legível
+        samplesWriter.WriteLine(string.Join(",", SampleColumns));
+    }
 
-        if (!isLogging)
-            return;
+    public void WriteLabel(string path, int classId, Vector4 yolo)
+    {
+        File.WriteAllText(path, ConvertToYOLOString(yolo, classId) + "\n");
+    }
 
-        var sample = new Sample();
-        sample.fileName = fileName;
-        sample.label = label;
-        sample.cameraPose.position = cameraPose.position;
-        sample.cameraPose.rotation = cameraPose.rotation;
-        sample.boundingBox = boundingBox;
-      
-        var jsonSample = JsonUtility.ToJson(sample, true);
-        var path = Path.Combine(datasetGen.datasetPath, "log.json");
-        var prepend = "";
-        if (!File.Exists(path))
+    public void WriteSampleRow(params object[] values)
+    {
+        if (samplesWriter == null || !isLogging) return;
+        var ci = CultureInfo.InvariantCulture;
+        var cells = new string[values.Length];
+        for (int i = 0; i < values.Length; i++)
         {
-            var header = "{\n\"samples\": [\n";
-            File.WriteAllText(path, header);
-        }else{
-            prepend = ",\n";
+            object v = values[i];
+            string s = v is float f ? f.ToString("G7", ci)
+                     : v is double d ? d.ToString("G9", ci)
+                     : v is IFormattable fm ? fm.ToString(null, ci)
+                     : (v?.ToString() ?? "");
+            if (s.IndexOfAny(new[] { ',', '"', '\n' }) >= 0) s = "\"" + s.Replace("\"", "\"\"") + "\"";
+            cells[i] = s;
         }
-        
-        File.AppendAllText(path, prepend + jsonSample);
-        
+        samplesWriter.WriteLine(string.Join(",", cells));
     }
 
-    public void CloseLog(){
-
-        if (!isLogging)
-            return;
-
-        var path = Path.Combine(datasetGen.datasetPath, "log.json");
-
-        if (!File.Exists(path)){
-            Debug.Log("Log file not found");
-            return;
-        }else{
-            var footer = "]\n}";
-            File.AppendAllText(path, footer);
+    public void EndRun()
+    {
+        if (samplesWriter != null)
+        {
+            samplesWriter.Flush();
+            samplesWriter.Dispose();
+            samplesWriter = null;
         }
     }
+
+    // Mantidos por compatibilidade (o log JSON foi substituído por samples.csv).
+    public void CloseLog() { EndRun(); }
+    public void GenerateYOLODatasetFromJSON() { }
+
+    void OnDestroy() { EndRun(); }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System;
+using System.Linq;
 using UnityEditor;
 using Dummiesman;
 using GaussianSplatting.Runtime;
@@ -14,11 +15,8 @@ public class InsectImport : MonoBehaviour
     DirectoryInfo meshModelsDir = new DirectoryInfo("C:\\Users\\felip\\Documents\\Mestrado\\Insetos\\ModelosTratados");
     FileInfo[] meshModelsFileInfo;
 
-    //DirectoryInfo splatModelsDir = new DirectoryInfo("Assets\\GaussianAssets");               //usar para instanciar objetos de fora da pasta assets
     string splatModelsDirString;
     DirectoryInfo splatModelsDir;  //only works for folders inside "assets"
-
-
 
     FileInfo[] splatModelsFileInfo;
 
@@ -31,27 +29,26 @@ public class InsectImport : MonoBehaviour
     public Material randomMaterial;
     public string texturesPath;
 
+    [Header("Bounding box dos splats")]
+    [Tooltip("Pasta com os .ply que geraram os assets (mesmo nome do asset). " +
+             "Usados para calcular bounding boxes justas. Pode ser a mesma pasta do SplatsAutoGenerator.")]
+    public string plySourceFolder = "C:/Users/felip/Documents/Mestrado/Insetos/ArtigoSibgrapi/.ply usados para gerar os datasets do artigo/Usados (alta variacao)/fly100_RD/fly100_RD";
+
+    // Lista completa e ordenada dos assets (não é alterada durante a geração).
+    public IReadOnlyList<string> AllSplatModelNames => allSplatModelNames;
+    private readonly List<string> allSplatModelNames = new List<string>();
+
     private void Awake()
     {
-
-        UnityEngine.Random.InitState(System.DateTime.Now.GetHashCode());
-
-
         splatModelsDirString = "Assets/GaussianAssets";
         splatModelsDir = new DirectoryInfo(splatModelsDirString); //only works for folders inside "assets"
 
-
-
         splatRenderer = this.gameObject.GetComponentInChildren<GaussianSplatRenderer>();
-
-
-        
 
         var texturefiles = Resources.LoadAll("InsectTextures", typeof(Texture2D));
 
         if (texturefiles != null && texturefiles.Length > 0)
         {
-
             this.textureNames = new string[texturefiles.Length];
 
             for (int i = 0; i < texturefiles.Length; i++)
@@ -60,52 +57,49 @@ public class InsectImport : MonoBehaviour
             }
         }
 
-
-
         //find all files on meshModelsDirectory and create a sting[] containing it's names
-        meshModelsFileInfo = meshModelsDir.GetFiles("*.*");
+        if (meshModelsDir.Exists)
+        {
+            meshModelsFileInfo = meshModelsDir.GetFiles("*.*").OrderBy(f => f.Name, StringComparer.Ordinal).ToArray();
+        }
+        else
+        {
+            meshModelsFileInfo = new FileInfo[0];
+            Debug.LogWarning("Pasta de modelos de malha não encontrada: " + meshModelsDir.FullName);
+        }
         meshModelNames = new string[meshModelsFileInfo.Length];
         for (int i = 0; i < meshModelsFileInfo.Length; i++)
         {
             meshModelNames[i] = meshModelsFileInfo[i].FullName;
         }
 
-        //find all .asset files on splatModelsDirectory and create a string[] containing it's names
-        splatModelsFileInfo = splatModelsDir.GetFiles("*.asset");
-        //splatModelNames = new string[splatModelsFileInfo.Length];
-        for (int i = 0; i < splatModelsFileInfo.Length; i++)
+        //find all .asset files on splatModelsDirectory (ordem alfabética = ordem reproduzível)
+        splatModelsFileInfo = splatModelsDir.Exists ? splatModelsDir.GetFiles("*.asset") : new FileInfo[0];
+        if (splatModelNames == null) splatModelNames = new List<string>();
+        splatModelNames.Clear();
+        foreach (var f in splatModelsFileInfo.OrderBy(f => f.Name, StringComparer.Ordinal))
         {
-            splatModelNames.Add(splatModelsFileInfo[i].Name);
+            splatModelNames.Add(f.Name);
         }
-
-
+        allSplatModelNames.Clear();
+        allSplatModelNames.AddRange(splatModelNames);
 
         if (texturesPath.Equals(""))
         {
             Debug.LogError("TexturesPath variable was not insert");
         }
-
-        //if (randomMaterial == null)
-        //{
-        //   Debug.LogError("RandomMaterial variable is null. Check if MaterialPath is correct on inspector");
-        //}
-
     }
 
     void Start()
     {
-      
+
     }
-
-    
-
 
     //Instantiate a random model in Resources path.
     public void InstantiateRandomMeshModel()
     {
-        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
-        GameObject modelToInstatiate = new OBJLoader().Load(meshModelNames[UnityEngine.Random.Range(0, meshModelsFileInfo.Length)]);
-
+        if (meshModelNames.Length == 0) { Debug.LogError("Nenhum modelo de malha encontrado."); return; }
+        GameObject modelToInstatiate = new OBJLoader().Load(meshModelNames[UnityEngine.Random.Range(0, meshModelNames.Length)]);
 
         modelToInstatiate.transform.position = new Vector3(modelToInstatiate.transform.position.x, 0.5f, modelToInstatiate.transform.position.z);
         modelToInstatiate.tag = "Model";
@@ -132,31 +126,54 @@ public class InsectImport : MonoBehaviour
                 break;
             }
         }
-        
     }
 
     public void InstantiateRandomSplatModel()
     {
-        UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
+        if (allSplatModelNames.Count == 0) { Debug.LogError("Nenhum asset de splat em " + splatModelsDirString); return; }
+        LoadSplatModel(allSplatModelNames[UnityEngine.Random.Range(0, allSplatModelNames.Count)]);
+    }
 
-        int model = UnityEngine.Random.Range(0, splatModelNames.Count);
-
-        splatRenderer.m_Asset = AssetDatabase.LoadAssetAtPath<GaussianSplatAsset>(Path.Combine(splatModelsDirString, splatModelNames[model]));
-        GetComponent<DatasetGenerator>().actualModel = splatRenderer.gameObject;
+    // Carrega um asset de splat pelo nome exato do arquivo (ex.: "modelo_PipeA_Photometric_0001.asset").
+    public bool LoadSplatModel(string assetFileName)
+    {
+        var asset = AssetDatabase.LoadAssetAtPath<GaussianSplatAsset>(Path.Combine(splatModelsDirString, assetFileName));
+        if (asset == null)
+        {
+            Debug.LogError("Asset de splat não encontrado: " + assetFileName);
+            return false;
+        }
+        splatRenderer.m_Asset = asset;
         splatRenderer.gameObject.tag = "Model";
+        GetComponent<DatasetGenerator>().actualModel = splatRenderer.gameObject;
+        return true;
+    }
+
+    public string CurrentSplatAssetName => (splatRenderer != null && splatRenderer.m_Asset != null) ? splatRenderer.m_Asset.name : "";
+
+    // Procura o .ply que gerou o asset: <plySourceFolder>/<nome>.ply e, como alternativa, Assets/GaussianAssets/<nome>.ply.
+    public string FindPlyForAsset(string assetName)
+    {
+        string baseName = Path.GetFileNameWithoutExtension(assetName);
+        var candidates = new List<string>();
+        if (!string.IsNullOrEmpty(plySourceFolder)) candidates.Add(Path.Combine(plySourceFolder, baseName + ".ply"));
+        candidates.Add(Path.Combine(splatModelsDirString, baseName + ".ply"));
+        foreach (var c in candidates)
+            if (File.Exists(c)) return c;
+        return null;
     }
 
     //Finds the current instantiated model and destroy it.
     public void destroyActualModel()
     {
-        if(!GetComponent<DatasetGenerator>().splatMode)
+        if (!GetComponent<DatasetGenerator>().splatMode)
         {
             //Checks if there is a mesh model instantiated before trying to destroying it
-            if (GameObject.FindGameObjectWithTag("Model") != null)
+            GameObject actualModel = GameObject.FindGameObjectWithTag("Model");
+            if (actualModel != null)
             {
-                GameObject actualModel = GameObject.FindGameObjectWithTag("Model");
-
-                Destroy(actualModel);
+                // DestroyImmediate: evita que o modelo antigo ainda seja encontrado pela tag no mesmo frame
+                DestroyImmediate(actualModel);
             }
         }
     }
@@ -165,29 +182,20 @@ public class InsectImport : MonoBehaviour
     //Add a material and aply the random texture to the new model.
     public void AddMaterial(GameObject model)
     {
-
-        Renderer modelRenderer;
-        GameObject insectMeshObject;
-        
+        if (textureNames == null || textureNames.Length == 0) return;
 
         for (int j = 0; j < model.transform.childCount; j++)
         {
-            insectMeshObject = model.transform.GetChild(j).gameObject;
+            GameObject insectMeshObject = model.transform.GetChild(j).gameObject;
+            Renderer modelRenderer = insectMeshObject.GetComponent<Renderer>();
+            if (modelRenderer == null) continue;
 
-            Texture2D texture = Resources.Load<Texture2D>("InsectTextures/" + textureNames[UnityEngine.Random.Range(0, textureNames.Length)]);
+            Texture2D texture = null;
+            for (int tries = 0; tries < 10 && texture == null; tries++)
+                texture = Resources.Load<Texture2D>("InsectTextures/" + textureNames[UnityEngine.Random.Range(0, textureNames.Length)]);
 
-            //Adding material to insect model
-            modelRenderer = insectMeshObject.GetComponent<Renderer>();
             modelRenderer.material = randomMaterial;
-                   
-                randomMaterial.mainTexture = texture;
-
-            if (randomMaterial.mainTexture == null)
-            {
-                AddMaterial(model);
-            }
-
+            randomMaterial.mainTexture = texture;
         }
-        
     }
 }

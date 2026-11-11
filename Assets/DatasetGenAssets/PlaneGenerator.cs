@@ -1,25 +1,23 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class PlaneGenerator : MonoBehaviour
 {
-    Texture2D [] groundTextures; 
-    // Start is called before the first frame update
+    Texture2D[] groundTextures;
+
+    [HideInInspector] public string lastTextureName = "";
+
     void Start()
     {
         groundTextures = Resources.LoadAll<Texture2D>("GroundTextures");
     }
+
     public void RandomizeTexture()
     {
+        if (groundTextures == null || groundTextures.Length == 0) return;
         Renderer renderer = gameObject.GetComponent<Renderer>();
         Material planeMaterial = renderer.material;
-        planeMaterial.mainTexture = groundTextures[UnityEngine.Random.Range(0, groundTextures.Length)];
-
+        int idx = UnityEngine.Random.Range(0, groundTextures.Length);
+        planeMaterial.mainTexture = groundTextures[idx];
+        lastTextureName = groundTextures[idx].name;
     }
 }
-
-    
